@@ -1,8 +1,10 @@
+#version 330
 // for raycasting
-#version 400
+//#version 400
 
 in vec3 Color;
 layout (location = 0) out vec4 FragColor;
+//out vec4 FragColor;
 
 
 void main()

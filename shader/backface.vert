@@ -1,8 +1,11 @@
+#version 330
 // for raycasting
-#version 400
+//#version 400
 
 layout(location = 0) in vec3 VerPos;
+//in vec3 VerPos;
 layout(location = 1) in vec3 VerClr;
+//in vec3 VerClr;
 
 out vec3 Color;
 
