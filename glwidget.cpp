@@ -57,7 +57,6 @@ int checkForOpenGLError(const char* file, int line)
     return retCode;
 }
 
-void display(void);
 void initVBO();
 void initShader();
 void initFrameBuffer(GLuint, GLuint, GLuint);
@@ -336,15 +335,15 @@ GLuint initVol3DTex(const char* filename, GLuint w, GLuint h, GLuint d)
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_REPEAT);
 
     // pixel transfer happens here from client to OpenGL server
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+//    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-//    glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
+    glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
 
 //    glPixelTransferi(GL_RED_SCALE, 16);
 
-    glTexImage3D(GL_TEXTURE_3D, 0, GL_INTENSITY, w, h, d, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE,data);
+//    glTexImage3D(GL_TEXTURE_3D, 0, GL_INTENSITY, w, h, d, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE,data);
 
-//    glTexImage3D(GL_TEXTURE_3D, 0, GL_INTENSITY16, w, h, d, 0, GL_RED, GL_UNSIGNED_SHORT, data);
+    glTexImage3D(GL_TEXTURE_3D, 0, GL_INTENSITY16, w, h, d, 0, GL_RED, GL_UNSIGNED_SHORT, data);
 
 //    glTexImage3D(GL_TEXTURE_3D, 0, GL_R16F, w, h, d, 0, GL_RED, GL_UNSIGNED_SHORT, data);
 //    glTexImage3D(GL_TEXTURE_3D, 0, GL_INTENSITY, w, h, d, 0, GL_LUMINANCE, GL_UNSIGNED_SHORT, data);
@@ -526,8 +525,9 @@ void render_gl(GLenum cullFace)
     glm::mat4 projection = glm::perspective(30.0f, (GLfloat)g_winWidth/g_winHeight, 0.1f, 400.f);
     glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 2.0f),
                                  glm::vec3(0.0f, 0.0f, 0.0f),
-                                 glm::vec3(0.0f, -1.0f, 0.0f)); //-- > Corrected at class, for head256
-//                                 glm::vec3(0.0f, 1.0f, 0.0f));
+                                 glm::vec3(0.0f, 1.0f, 0.0f));
+//                                 glm::vec3(0.0f, -1.0f, 0.0f)); //-- > Corrected at class, for head256
+
 
 
     glm::mat4 model = mat4(1.0f);
@@ -566,7 +566,6 @@ void render_gl(GLenum cullFace)
 void GLWidget::rotateDisplay()
 {
     g_angle = (g_angle + 1) % 360;
-    //    glutPostRedisplay();
     update();
 }
 
