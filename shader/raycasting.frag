@@ -50,7 +50,7 @@ void main()
     	// front-to-back integration
     	if (colorSample.a > 0.0) {
     	    // accomodate for variable sampling rates (base interval defined by mod_compositing.frag)
-    	    colorSample.a = 1.0 - pow(1.0 - colorSample.a, StepSize*200.0f);
+            colorSample.a = 1.0 - pow(1.0 - colorSample.a, StepSize*200.0f);
     	    colorAcum.rgb += (1.0 - colorAcum.a) * colorSample.rgb * colorSample.a;
     	    colorAcum.a += (1.0 - colorAcum.a) * colorSample.a;
     	}

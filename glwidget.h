@@ -28,6 +28,9 @@ class GLWidget : public QGLWidget
 
 public:
 
+    void mousePressEvent(QMouseEvent *event);
+    void mouseMoveEvent(QMouseEvent *event);
+
      GLWidget(const QGLFormat& format, QWidget *parent = 0);
 
     ~GLWidget();

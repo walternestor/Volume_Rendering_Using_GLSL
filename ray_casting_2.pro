@@ -36,3 +36,5 @@ DISTFILES += \
     shader/raycasting.frag \
     shader/backface.vert \
     shader/raycasting.vert
+
+FORMS +=

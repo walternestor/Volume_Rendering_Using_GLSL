@@ -40,6 +40,21 @@ GLuint g_bfVertHandle;
 GLuint g_bfFragHandle;
 float g_stepSize = 0.001f;
 
+float ustep = 0.00f;
+float dstep = 0.00f;
+float fstep = 0.00f;
+float bstep = 0.00f;
+float lstep = 0.00f;
+float rstep = 0.00f;
+
+//GLfloat rotationX;
+GLfloat rotationY;
+GLfloat rotationZ;
+QPoint lastPos;
+
+GLuint vertexdat;
+
+
 int checkForOpenGLError(const char* file, int line)
 {
     // return 1 if an OpenGL error occured, 0 otherwise.
@@ -78,6 +93,7 @@ void initVBO()
         1.0, 1.0, 0.0,
         1.0, 1.0, 1.0
     };
+
     // draw the six faces of the boundbox by drawwing triangles
     // draw it contra-clockwise
     // front: 1 5 7 3
@@ -106,7 +122,6 @@ void initVBO()
     //    GLuint vertexdat = gbo[0];
     //    GLuint veridxdat = gbo[1];
 
-    GLuint vertexdat;
     GLuint veridxdat;
     glGenBuffers(1, &vertexdat);
     glGenBuffers(1, &veridxdat);
@@ -260,7 +275,7 @@ GLuint initTFF1DTex(const char* filename)
     if (inFile.eof())
     {
         size_t bytecnt = inFile.gcount();
-        *(tff + bytecnt) = '\0';
+        *(tff + bytecnt) = '\0'; // --> Null Terminator
         cout << "bytecnt " << bytecnt << endl;
     }
     else if(inFile.fail())
@@ -271,6 +286,56 @@ GLuint initTFF1DTex(const char* filename)
     {
         cout << filename << "is too large" << endl;
     }
+
+//    GLubyte tff[4096][4];
+//    GLubyte tff[4096*4];
+//    int j = 0;
+//    for (int i = 0; i < 4095; i+=4)
+//    {
+//        if (i < 40)
+//        {
+//            tff[j++] = ((i*0.91f/(float)4096)*255);  //R
+//            tff[j++] = ((i*0.7f/(float)4096)*255);   // G
+//            tff[j++] = ((i*0.61f/(float)4096)*255);  // B
+//            tff[j++] = 0; //((i*0.0f/(float)4096)*255); // A
+//        }
+//        else if (i >= 41 && i < 60)
+//        {
+//            tff[j++] = ((i*0.91f/(float)4096)*255); //R
+//            tff[j++] = ((i*0.7f/(float)4096)*255);  // G
+//            tff[j++] = ((i*0.61f/(float)4096)*255); // B
+//            tff[j++] = 0.0f;//((i*0.2f/(float)4096)*255);  // A
+//        }
+//        else if (i >= 61 && i < 80)
+//        {
+//            tff[j++] = ((i*0.91f/(float)4096)*255); //R
+//            tff[j++] = ((i*0.7f/(float)4096)*255);  // G
+//            tff[j++] = ((i*0.61f/(float)4096)*255); // B
+//            tff[j++] = 0;
+//        }
+//        else if (i >= 61 && i < 80)
+//        {
+//            tff[j++] = ((i*0.91f/(float)4096)*255); //R
+//            tff[j++] = ((i*0.7f/(float)4096)*255);  // G
+//            tff[j++] = ((i*0.61f/(float)4096)*255); // B
+//            tff[j++] = 0;
+//        }
+//        else if (i >= 81 && i < 200)
+//        {
+//            tff[j++] = ((i*1.0f/(float)4096)*255);
+//            tff[j++] = ((i*1.0f/(float)4096)*255);
+//            tff[j++] = ((i*0.85f/(float)4096)*255);
+//            tff[j++] = 200;//((i*0.9f/(float)4096)*255);  // A
+//        }
+////        else
+////        {
+////            tff[j++] = ((i*1.0f/(float)4096)*255);
+////            tff[j++] = ((i*1.0f/(float)4096)*255);
+////            tff[j++] = ((i*0.85f/(float)4096)*255);
+////            tff[j++] = ((i*1.0f/(float)4096)*255);  // A
+////        }
+//    }
+
     GLuint tff1DTex;
     glGenTextures(1, &tff1DTex);
     glBindTexture(GL_TEXTURE_1D, tff1DTex);
@@ -279,11 +344,15 @@ GLuint initTFF1DTex(const char* filename)
     glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA8, 256, 0, GL_RGBA, GL_UNSIGNED_BYTE, tff);
+
+//    glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA8, 256*4, 0, GL_RGBA, GL_UNSIGNED_BYTE, tff);
+
+//    glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA8, 256*4, 0, GL_RGBA, GL_FLOAT, tff);
     free(tff);
     return tff1DTex;
 }
 
-// init the 2D texture for render backface 'bf' stands for backface
+// init the 2D texture for render backface 'bf', stands for backface
 GLuint initFace2DTex(GLuint bfTexWidth, GLuint bfTexHeight)
 {
     GLuint backFace2DTex;
@@ -337,6 +406,7 @@ GLuint initVol3DTex(const char* filename, GLuint w, GLuint h, GLuint d)
     // pixel transfer happens here from client to OpenGL server
 //    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
+    // Need to swap bytes due to endianness of the DICOM file
     glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
 
 //    glPixelTransferi(GL_RED_SCALE, 16);
@@ -521,25 +591,25 @@ void render_gl(GLenum cullFace)
     glClearColor(0.2f,0.2f,0.2f,1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     //  transform the box
-//    glm::mat4 projection = glm::perspective(60.0f, (GLfloat)g_winWidth/g_winHeight, 0.1f, 400.f);
     glm::mat4 projection = glm::perspective(30.0f, (GLfloat)g_winWidth/g_winHeight, 0.1f, 400.f);
     glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 2.0f),
                                  glm::vec3(0.0f, 0.0f, 0.0f),
                                  glm::vec3(0.0f, 1.0f, 0.0f));
 //                                 glm::vec3(0.0f, -1.0f, 0.0f)); //-- > Corrected at class, for head256
 
-
-
     glm::mat4 model = mat4(1.0f);
-    model *= glm::rotate((float)g_angle, glm::vec3(0.0f, 1.0f, 0.0f));
+//    model *= glm::rotate((float)g_angle, glm::vec3(0.0f, 1.0f, 0.0f));
+    model *= glm::rotate((float)rotationY, glm::vec3(0.0f, -1.0f, 0.0f));
+    model *= glm::rotate((float)rotationZ, glm::vec3(1.0f, 0.0f, 0.0f));
+
     // to make the "head256.raw" i.e. the volume data stand up.
     model *= glm::rotate(90.0f, vec3(1.0f, 0.0f, 0.0f));
-
 //    model *= glm::scale(glm::mat4(1.0f),glm::vec3(3.0f,3.0f,3.0f));
-
     model *= glm::translate(glm::vec3(-0.5f, -0.5f, -0.5f));
+
     // notice the multiplication order: reverse order of transform
     glm::mat4 mvp = projection * view * model;
+
     GLuint mvpIdx = glGetUniformLocation(g_programHandle, "MVP");
     if (mvpIdx >= 0)
     {
@@ -565,8 +635,57 @@ void render_gl(GLenum cullFace)
 
 void GLWidget::rotateDisplay()
 {
-    g_angle = (g_angle + 1) % 360;
+    // front: 1 5 7 3 - 0,0,1 / 1,0,1 / 1,1,1 / 0,1,1
+    // back: 0 2 6 4  - 0,0,0 / 0,1,0 / 1,1,0 / 1,0,0
+    // left: 0 1 3 2  - 0,0,0 / 0,0,1 / 1,1,0 / 0,1,1
+    // right:7 5 4 6  - 1,1,1 / 1,0,1 / 1,0,0 / 1,1,0
+    // up: 2 3 7 6    - 0,1,0 / 0,1,1 / 1,1,1 / 1,1,0
+    // down: 1 0 4 5  - 0,0,1 / 0,0,0 / 1,0,0 / 1,0,1
+    GLfloat vertices[24] = {
+        0.0-lstep, 0.0-fstep, 0.0-dstep,
+        0.0-lstep, 0.0-fstep, 1.0+ustep,
+        0.0-lstep, 1.0+bstep, 0.0-dstep,
+        0.0-lstep, 1.0+bstep, 1.0+ustep,
+        1.0+rstep, 0.0-fstep, 0.0-dstep,
+        1.0+rstep, 0.0-fstep, 1.0+ustep,
+        1.0+rstep, 1.0+bstep, 0.0-dstep,
+        1.0+rstep, 1.0+bstep, 1.0+ustep
+    };
+    glBindBuffer(GL_ARRAY_BUFFER, vertexdat);
+    glBufferData(GL_ARRAY_BUFFER, 24*sizeof(GLfloat), vertices, GL_STATIC_DRAW);
+//    g_angle = (g_angle + 1) % 360;
+
+    ustep -= 0.00f; // Up
+    dstep -= 0.00f; // Down
+    rstep -= 0.00f; // Right
+    bstep -= 0.00f; // Back
+    lstep -= 0.00f; // Left
+    fstep -= 0.00f; // Front
+
     update();
+}
+
+
+// ============================================
+//
+// ============================================
+void GLWidget::mousePressEvent(QMouseEvent *event)
+{
+    lastPos = event->pos();
+}
+
+void GLWidget::mouseMoveEvent(QMouseEvent *event)
+{
+    GLfloat dx = (GLfloat) (event->x() - lastPos.x());
+    GLfloat dy = (GLfloat) (event->y() - lastPos.y());
+
+    if (event->buttons() & Qt::LeftButton)
+    {
+            rotationY += 0.01f * dx;
+            rotationZ += 0.01f * dy;
+            update();
+    }
+    lastPos = event->pos();
 }
 
 //================================================
@@ -591,16 +710,15 @@ void GLWidget::initializeGL()
     g_texHeight = g_winHeight;
     initVBO();
     initShader();
-    g_tffTexObj = initTFF1DTex("../../ray_casting_2/tff.dat");
+    g_tffTexObj = initTFF1DTex("../../Volume_Rendering_Using_GLSL/tff.dat");
+//    g_tffTexObj = initTFF1DTex("../../Volume_Rendering_Using_GLSL/tff2.txt");
     g_bfTexObj = initFace2DTex(g_texWidth, g_texHeight);
 
     // Original Volume
-    g_volTexObj = initVol3DTex("../../ray_casting_2/head256.raw", 256, 256, 225);
+//    g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/head256.raw", 256, 256, 225);
     // Other Volumes
-//    g_volTexObj = initVol3DTex("../../ray_casting_2/model.raw", 512, 512, 22);
-//    g_volTexObj = initVol3DTex("../../ray_casting_2/model2.raw", 512, 512, 22);
-//    g_volTexObj = initVol3DTex("../../ray_casting_2/model3.raw", 512, 512, 58);
-//    g_volTexObj = initVol3DTex("../../ray_casting_2/model4.raw", 512, 512, 58);
+    g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/brainix.raw", 512, 512, 22);
+//    g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model2.raw", 512, 512, 58);
 
     GL_ERROR();
     initFrameBuffer(g_bfTexObj, g_texWidth, g_texHeight);
@@ -666,12 +784,18 @@ void GLWidget::resizeGL(int w, int h)
 GLWidget::GLWidget(const QGLFormat& format, QWidget *parent)
     : QGLWidget(format, parent)
 {
-    setFormat(QGLFormat(QGL::DoubleBuffer | QGL::DepthBuffer | QGL::Rgba)); // | QGL::SampleBuffers | QGL::AccumBuffer | QGL::AlphaChannel));
+    setFormat(QGLFormat(QGL::DoubleBuffer | QGL::DepthBuffer | QGL::Rgba | QGL::SampleBuffers | QGL::AccumBuffer | QGL::AlphaChannel));
 
     QTimer *timer = new QTimer(this);
     timer->setInterval(500);
     connect(timer, SIGNAL(timeout()), this, SLOT(rotateDisplay()));
     timer->start();
+
+    setMouseTracking(true);
+    setFocusPolicy(Qt::StrongFocus);
+//    rotationX = 0;
+    rotationY = 0;
+    rotationZ = 0;
 }
 
 GLWidget::~GLWidget()
