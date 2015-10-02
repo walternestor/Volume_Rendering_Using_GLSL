@@ -1,32 +1,48 @@
+// window.cpp
 
-#include <iostream>
-#include "glwidget.h"
+//#include <QtWidgets>
 #include "window.h"
+#include "ui_window.h"
 
-Window::Window()
+#include "myglwidget.h"
+
+Window::Window(QWidget *parent) :
+    QWidget(parent),
+    ui(new Ui::Window)
 {
+    ui->setupUi(this);
 
-    /// Specify an OpenGL 3.3 format using the Core profile.
-    /// That is, no old-school fixed pipeline functionality
-    QGLFormat glFormat;
+//    topSlider = new QSlider(Qt::Horizontal);
+//    bottomSlider = new QSlider(Qt::Horizontal);
 
-    glFormat.setVersion( 3, 3 );
-    glFormat.setProfile( QGLFormat::CoreProfile ); /**< Requires >=Qt-4.8.0 */
-    glFormat.setSampleBuffers( true );
-    glFormat.setAlpha(true);
-    glFormat.setAccum(true);
-    glFormat.setDepth(true);
-    glFormat.setDoubleBuffer(true);
-    glFormat.setRgba(true);
 
-    /// Create a GLWidget requesting our format
-    glWidget = new GLWidget(glFormat);
+//    connect(ui->topSlider, SIGNAL(valueChanged(int)), ui->myGLWidget, SLOT(cutBoundBox(int)));
+//    connect(ui->bottomSlider, SIGNAL(valueChanged(int)), ui->myGLWidget, SLOT(cutBoundBox(int)));
 
-    /// Add the GLWidget em box Layout
-    QHBoxLayout *mainLayout = new QHBoxLayout;
-    mainLayout->addWidget(glWidget);
-    setLayout(mainLayout);
-    setWindowTitle(tr("Ray Casting"));
+    connect(ui->topSlider, SIGNAL(valueChanged(int)), ui->myGLWidget, SLOT(cutBBTop(int)));
+    connect(ui->bottomSlider, SIGNAL(valueChanged(int)), ui->myGLWidget, SLOT(cutBBBottom(int)));
+    connect(ui->leftSlider, SIGNAL(valueChanged(int)), ui->myGLWidget, SLOT(cutBBLeft(int)));
+    connect(ui->rightSlider, SIGNAL(valueChanged(int)), ui->myGLWidget, SLOT(cutBBRight(int)));
+    connect(ui->frontSlider, SIGNAL(valueChanged(int)), ui->myGLWidget, SLOT(cutBBFront(int)));
+    connect(ui->backSlider, SIGNAL(valueChanged(int)), ui->myGLWidget, SLOT(cutBBBack(int)));
+}
+
+//int Window::getSender(void)
+//{
+//    // e.g. check with member variable _foobarButton
+//       QObject* obj = sender();
+
+//       if(obj == topSlider)
+//       {
+//       }
+//       else if (obj == bottomSlider)
+//       {
+//       }
+//}
+
+Window::~Window()
+{
+    delete ui;
 }
 
 void Window::keyPressEvent(QKeyEvent *e)
