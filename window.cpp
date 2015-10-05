@@ -12,19 +12,16 @@ Window::Window(QWidget *parent) :
 {
     ui->setupUi(this);
 
-//    topSlider = new QSlider(Qt::Horizontal);
-//    bottomSlider = new QSlider(Qt::Horizontal);
-
-
-//    connect(ui->topSlider, SIGNAL(valueChanged(int)), ui->myGLWidget, SLOT(cutBoundBox(int)));
-//    connect(ui->bottomSlider, SIGNAL(valueChanged(int)), ui->myGLWidget, SLOT(cutBoundBox(int)));
-
     connect(ui->topSlider, SIGNAL(valueChanged(int)), ui->myGLWidget, SLOT(cutBBTop(int)));
     connect(ui->bottomSlider, SIGNAL(valueChanged(int)), ui->myGLWidget, SLOT(cutBBBottom(int)));
     connect(ui->leftSlider, SIGNAL(valueChanged(int)), ui->myGLWidget, SLOT(cutBBLeft(int)));
     connect(ui->rightSlider, SIGNAL(valueChanged(int)), ui->myGLWidget, SLOT(cutBBRight(int)));
     connect(ui->frontSlider, SIGNAL(valueChanged(int)), ui->myGLWidget, SLOT(cutBBFront(int)));
     connect(ui->backSlider, SIGNAL(valueChanged(int)), ui->myGLWidget, SLOT(cutBBBack(int)));
+
+    connect(ui->azimuthSlider, SIGNAL(valueChanged(int)), ui->myGLWidget, SLOT(azimuthUniform(int)));
+    connect(ui->elevationSlider, SIGNAL(valueChanged(int)), ui->myGLWidget, SLOT(elevationUniform(int)));
+    connect(ui->clipPlaneDepthSlider, SIGNAL(valueChanged(int)), ui->myGLWidget, SLOT(clipPlaneDepthUniform(int)));
 }
 
 //int Window::getSender(void)

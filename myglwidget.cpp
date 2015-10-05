@@ -7,26 +7,29 @@
 // TODO: Improve/correct bug - cutting/culling functions
 
 
+// Program Includes
 #include "myglwidget.h"
 
+// Qt Includes
+#include <QDebug>
+
+// C/C++ includes
 #include <iostream>
 #include <fstream>
 #include <cstdio>
 #include <cstdlib>
 
-#include <GL/gl.h>
-#include <GL/glext.h>
-
+// GLM includes
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/transform2.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#define GL_ERROR() checkForOpenGLError(__FILE__, __LINE__)
-
 using namespace std;
 using glm::mat4;
 using glm::vec3;
+
+#define GL_ERROR() checkForOpenGLError(__FILE__, __LINE__)
 
 GLuint g_vao;
 GLuint vao;
@@ -46,12 +49,6 @@ GLuint g_rcFragHandle;
 GLuint g_bfVertHandle;
 GLuint g_bfFragHandle;
 float g_stepSize = 0.001f;
-
-//GLfloat rotationX;
-GLfloat rotationY;
-GLfloat rotationZ;
-QPoint lastPos;
-
 GLuint vertexdat;
 
 GLfloat vertices[24] = {
@@ -64,6 +61,16 @@ GLfloat vertices[24] = {
     1.0, 1.0, 0.0,
     1.0, 1.0, 1.0
 };
+
+// Mouse Controls
+GLfloat rotationY;
+GLfloat rotationZ;
+QPoint lastPos;
+
+// Clip Plane Controls
+GLint elevationValue;
+GLint azimuthValue;
+GLfloat clipPlaneValueValue;
 
 int checkForOpenGLError(const char* file, int line)
 {
@@ -89,6 +96,7 @@ GLuint initTFF1DTex(const char* filename);
 GLuint initFace2DTex(GLuint texWidth, GLuint texHeight);
 GLuint initVol3DTex(const char* filename, GLuint width, GLuint height, GLuint depth);
 void render_gl(GLenum cullFace);
+void linkShader(GLuint shaderPgm, GLuint newVertHandle, GLuint newFragHandle);
 
 // init the vertex buffer object
 void initVBO()
@@ -127,11 +135,6 @@ void initVBO()
         1,0,4,
         4,5,1
     };
-
-    //    GLuint gbo[2];
-    //    glGenBuffers(2, gbo);
-    //    GLuint vertexdat = gbo[0];
-    //    GLuint veridxdat = gbo[1];
 
     GLuint veridxdat;
     glGenBuffers(1, &vertexdat);
@@ -298,54 +301,53 @@ GLuint initTFF1DTex(const char* filename)
         cout << filename << "is too large" << endl;
     }
 
-    //    GLubyte tff[4096][4];
-    //    GLubyte tff[4096*4];
-    //    int j = 0;
-    //    for (int i = 0; i < 4095; i+=4)
-    //    {
-    //        if (i < 40)
-    //        {
-    //            tff[j++] = ((i*0.91f/(float)4096)*255);  //R
-    //            tff[j++] = ((i*0.7f/(float)4096)*255);   // G
-    //            tff[j++] = ((i*0.61f/(float)4096)*255);  // B
-    //            tff[j++] = 0; //((i*0.0f/(float)4096)*255); // A
-    //        }
-    //        else if (i >= 41 && i < 60)
-    //        {
-    //            tff[j++] = ((i*0.91f/(float)4096)*255); //R
-    //            tff[j++] = ((i*0.7f/(float)4096)*255);  // G
-    //            tff[j++] = ((i*0.61f/(float)4096)*255); // B
-    //            tff[j++] = 0.0f;//((i*0.2f/(float)4096)*255);  // A
-    //        }
-    //        else if (i >= 61 && i < 80)
-    //        {
-    //            tff[j++] = ((i*0.91f/(float)4096)*255); //R
-    //            tff[j++] = ((i*0.7f/(float)4096)*255);  // G
-    //            tff[j++] = ((i*0.61f/(float)4096)*255); // B
-    //            tff[j++] = 0;
-    //        }
-    //        else if (i >= 61 && i < 80)
-    //        {
-    //            tff[j++] = ((i*0.91f/(float)4096)*255); //R
-    //            tff[j++] = ((i*0.7f/(float)4096)*255);  // G
-    //            tff[j++] = ((i*0.61f/(float)4096)*255); // B
-    //            tff[j++] = 0;
-    //        }
-    //        else if (i >= 81 && i < 200)
-    //        {
-    //            tff[j++] = ((i*1.0f/(float)4096)*255);
-    //            tff[j++] = ((i*1.0f/(float)4096)*255);
-    //            tff[j++] = ((i*0.85f/(float)4096)*255);
-    //            tff[j++] = 200;//((i*0.9f/(float)4096)*255);  // A
-    //        }
-    ////        else
-    ////        {
-    ////            tff[j++] = ((i*1.0f/(float)4096)*255);
-    ////            tff[j++] = ((i*1.0f/(float)4096)*255);
-    ////            tff[j++] = ((i*0.85f/(float)4096)*255);
-    ////            tff[j++] = ((i*1.0f/(float)4096)*255);  // A
-    ////        }
-    //    }
+//        GLubyte tff[4096*4];
+//        int j = 0;
+//        for (int i = 0; i < 4095; i+=4)
+//        {
+//            if (i < 40)
+//            {
+//                tff[j++] = ((i*0.91f/(float)4096)*255);  //R
+//                tff[j++] = ((i*0.7f/(float)4096)*255);   // G
+//                tff[j++] = ((i*0.61f/(float)4096)*255);  // B
+//                tff[j++] = 0; //((i*0.0f/(float)4096)*255); // A
+//            }
+//            else if (i >= 41 && i < 60)
+//            {
+//                tff[j++] = ((i*0.91f/(float)4096)*255); //R
+//                tff[j++] = ((i*0.7f/(float)4096)*255);  // G
+//                tff[j++] = ((i*0.61f/(float)4096)*255); // B
+//                tff[j++] = 0.0f;//((i*0.2f/(float)4096)*255);  // A
+//            }
+//            else if (i >= 61 && i < 80)
+//            {
+//                tff[j++] = ((i*0.91f/(float)4096)*255); //R
+//                tff[j++] = ((i*0.7f/(float)4096)*255);  // G
+//                tff[j++] = ((i*0.61f/(float)4096)*255); // B
+//                tff[j++] = 0;
+//            }
+//            else if (i >= 61 && i < 80)
+//            {
+//                tff[j++] = ((i*0.91f/(float)4096)*255); //R
+//                tff[j++] = ((i*0.7f/(float)4096)*255);  // G
+//                tff[j++] = ((i*0.61f/(float)4096)*255); // B
+//                tff[j++] = 0;
+//            }
+//            else if (i >= 81 && i < 200)
+//            {
+//                tff[j++] = ((i*1.0f/(float)4096)*255);
+//                tff[j++] = ((i*1.0f/(float)4096)*255);
+//                tff[j++] = ((i*0.85f/(float)4096)*255);
+//                tff[j++] = 200;//((i*0.9f/(float)4096)*255);  // A
+//            }
+//    //        else
+//    //        {
+//    //            tff[j++] = ((i*1.0f/(float)4096)*255);
+//    //            tff[j++] = ((i*1.0f/(float)4096)*255);
+//    //            tff[j++] = ((i*0.85f/(float)4096)*255);
+//    //            tff[j++] = ((i*1.0f/(float)4096)*255);  // A
+//    //        }
+//        }
 
     GLuint tff1DTex;
     glGenTextures(1, &tff1DTex);
@@ -355,10 +357,7 @@ GLuint initTFF1DTex(const char* filename)
     glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA8, 256, 0, GL_RGBA, GL_UNSIGNED_BYTE, tff);
-
-    //    glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA8, 256*4, 0, GL_RGBA, GL_UNSIGNED_BYTE, tff);
-
-    //    glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA8, 256*4, 0, GL_RGBA, GL_FLOAT, tff);
+//    glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA8, 256*4, 0, GL_RGBA, GL_UNSIGNED_BYTE, tff);
     free(tff);
     return tff1DTex;
 }
@@ -405,6 +404,7 @@ GLuint initVol3DTex(const char* filename, GLuint w, GLuint h, GLuint d)
     }
     fclose(fp);
 
+
     glGenTextures(1, &g_volTexObj);
     // bind 3D texture target
     glBindTexture(GL_TEXTURE_3D, g_volTexObj);
@@ -420,15 +420,8 @@ GLuint initVol3DTex(const char* filename, GLuint w, GLuint h, GLuint d)
     // Need to swap bytes due to endianness of the DICOM file
     glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
 
-    //    glPixelTransferi(GL_RED_SCALE, 16);
-
-    //    glTexImage3D(GL_TEXTURE_3D, 0, GL_INTENSITY, w, h, d, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE,data);
-
+//    glTexImage3D(GL_TEXTURE_3D, 0, GL_INTENSITY, w, h, d, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE,data);
     glTexImage3D(GL_TEXTURE_3D, 0, GL_INTENSITY16, w, h, d, 0, GL_RED, GL_UNSIGNED_SHORT, data);
-
-    //    glTexImage3D(GL_TEXTURE_3D, 0, GL_R16F, w, h, d, 0, GL_RED, GL_UNSIGNED_SHORT, data);
-    //    glTexImage3D(GL_TEXTURE_3D, 0, GL_INTENSITY, w, h, d, 0, GL_LUMINANCE, GL_UNSIGNED_SHORT, data);
-    //    glTexImage3D(GL_TEXTURE_3D, 0, GL_RED, w, h, d, 0, GL_RED, GL_UNSIGNED_SHORT, data);
 
     GL_ERROR();
 
@@ -465,6 +458,32 @@ void initFrameBuffer(GLuint texObj, GLuint texWidth, GLuint texHeight)
     glEnable(GL_DEPTH_TEST);
 }
 
+
+void MyGLWidget::elevationUniform(int value)
+{
+    qDebug() << "Elevation" << value;
+
+    elevationValue = value;
+    updateGL();
+}
+
+void MyGLWidget::azimuthUniform(int value)
+{
+    qDebug() << "Azimuth" << value;
+
+    azimuthValue = value;
+    updateGL();
+}
+
+void MyGLWidget::clipPlaneDepthUniform(int value)
+{
+    qDebug() << "ClipPlaneDepth" << value;
+
+    clipPlaneValueValue = ((float)value/100.0f);
+//    qDebug() << "ClipPlaneDepth FLOAT" << clipPlaneValueValue;
+    updateGL();
+}
+
 void rcSetUinforms()
 {
     // setting uniforms such as
@@ -494,6 +513,8 @@ void rcSetUinforms()
     }
     else
     {
+        qDebug() << "StepSize is not bind to the uniform";
+
         cout << "StepSize"
              << "is not bind to the uniform"
              << endl;
@@ -539,23 +560,72 @@ void rcSetUinforms()
     }
     else
     {
+        qDebug() << "VolumeTex is not bind to the uniform";
+
         cout << "VolumeTex"
              << "is not bind to the uniform"
              << endl;
     }
 
+    GL_ERROR();
+    GLint stepElevation = glGetUniformLocation(g_programHandle, "elevation");
+    if (stepElevation >= 0)
+    {
+        // Load data into uniform shader variable
+        glUniform1f(stepElevation, (float)elevationValue);
+    }
+    else
+    {
+        qDebug() << "stepElevation is NOT bind to the uniform";
+
+        cout << "stepElevation"
+             << "is not bind to the uniform"
+             << endl;
+    }
+
+    GL_ERROR();
+    GLint stepAzimuth = glGetUniformLocation(g_programHandle, "azimuth");
+    if (stepAzimuth >= 0)
+    {
+        // Load data into uniform shader variable
+        glUniform1f(stepAzimuth, (float)azimuthValue);
+    }
+    else
+    {
+        qDebug() << "stepAzimuth is NOT bind to the uniform";
+
+        cout << "stepAzimuth"
+             << "is not bind to the uniform"
+             << endl;
+    }
+
+    GL_ERROR();
+    GLint stepClipPlaneDepth = glGetUniformLocation(g_programHandle, "clipPlaneDepth");
+    if (stepClipPlaneDepth >= 0)
+    {
+        // Load data into uniform shader variable
+        glUniform1f(stepClipPlaneDepth, clipPlaneValueValue);
+    }
+    else
+    {
+        qDebug() << "stepAzimuth is NOT bind to the uniform";
+
+        cout << "stepAzimuth"
+             << "is not bind to the uniform"
+             << endl;
+    }
 }
 // init the shader object and shader program
 void initShader()
 {
     // vertex shader object for first pass
-    g_bfVertHandle = initShaderObj("../../ray_casting_2/shader/backface.vert", GL_VERTEX_SHADER);
+    g_bfVertHandle = initShaderObj("../../Volume_Rendering_Using_GLSL/shader/backface.vert", GL_VERTEX_SHADER);
     // fragment shader object for first pass
-    g_bfFragHandle = initShaderObj("../../ray_casting_2/shader/backface.frag", GL_FRAGMENT_SHADER);
+    g_bfFragHandle = initShaderObj("../../Volume_Rendering_Using_GLSL/shader/backface.frag", GL_FRAGMENT_SHADER);
     // vertex shader object for second pass
-    g_rcVertHandle = initShaderObj("../../ray_casting_2/shader/raycasting.vert", GL_VERTEX_SHADER);
+    g_rcVertHandle = initShaderObj("../../Volume_Rendering_Using_GLSL/shader/raycasting.vert", GL_VERTEX_SHADER);
     // fragment shader object for second pass
-    g_rcFragHandle = initShaderObj("../../ray_casting_2/shader/raycasting.frag", GL_FRAGMENT_SHADER);
+    g_rcFragHandle = initShaderObj("../../Volume_Rendering_Using_GLSL/shader/raycasting.frag", GL_FRAGMENT_SHADER);
     // create the shader program , use it in an appropriate time
     g_programHandle = createShaderPgm();
 }
@@ -602,20 +672,22 @@ void render_gl(GLenum cullFace)
     glClearColor(1.0f,1.0f,1.0f,1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     //  transform the box
-    glm::mat4 projection = glm::perspective(30.0f, (GLfloat)g_winWidth/g_winHeight, 0.1f, 400.f);
+    glm::mat4 projection = glm::perspective(45.0f, (GLfloat)g_winWidth/(GLfloat)g_winHeight, 0.1f, 100.f);
     glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 2.0f),
                                  glm::vec3(0.0f, 0.0f, 0.0f),
                                  glm::vec3(0.0f, 1.0f, 0.0f));
-    //                                 glm::vec3(0.0f, -1.0f, 0.0f)); //-- > Corrected at class, for head256
 
     glm::mat4 model = mat4(1.0f);
     //    model *= glm::rotate((float)g_angle, glm::vec3(0.0f, 1.0f, 0.0f));
-    model *= glm::rotate((float)rotationY, glm::vec3(0.0f, -1.0f, 0.0f));
+    model *= glm::rotate((float)rotationY, glm::vec3(0.0f, 1.0f, 0.0f));
     model *= glm::rotate((float)rotationZ, glm::vec3(1.0f, 0.0f, 0.0f));
 
     // to make the "head256.raw" i.e. the volume data stand up.
-    model *= glm::rotate(90.0f, vec3(1.0f, 0.0f, 0.0f));
-    //    model *= glm::scale(glm::mat4(1.0f),glm::vec3(3.0f,3.0f,3.0f));
+    model *= glm::rotate(180.0f, vec3(1.0f, 0.0f, 0.0f));
+
+    // Add zoom option with it or change de FOV value, best approach?
+//    model *= glm::scale(glm::mat4(1.0f),glm::vec3(2.0f,2.0f,2.0f));
+
     model *= glm::translate(glm::vec3(-0.5f, -0.5f, -0.5f));
 
     // notice the multiplication order: reverse order of transform
@@ -647,21 +719,10 @@ void render_gl(GLenum cullFace)
 // ==============
 //
 // ==============
-//void MyGLWidget::cutBoundBox(int value)
-//{
-//    // e.g. check with member variable _foobarButton
-//       QObject* obj = sender();
-
-//       if(obj == Window::topSlider)
-//       {
-//       }
-//       else if (obj == Window::bottomSlider)
-//       {
-//       }
-//}
-
 void MyGLWidget::cutBBLeft(int value)
 {
+    std::cout << value << endl;
+
     float lstep = 0.00f;
     lstep -= (value * 0.01f);
 
@@ -674,17 +735,6 @@ void MyGLWidget::cutBBLeft(int value)
     vertices[3] -= lstep;
     vertices[6] -= lstep;
     vertices[9] -= lstep;
-
-//  GLfloat vertices[24] = {
-//        0.0-lstep, 0.0, 0.0,
-//        0.0-lstep, 0.0, 1.0,
-//        0.0-lstep, 1.0, 0.0,
-//        0.0-lstep, 1.0, 1.0,
-//        1.0,       0.0, 0.0,
-//        1.0,       0.0, 1.0,
-//        1.0,       1.0, 0.0,
-//        1.0,       1.0, 1.0
-//    };
 
     glBindBuffer(GL_ARRAY_BUFFER, vertexdat);
     glBufferData(GL_ARRAY_BUFFER, 24*sizeof(GLfloat), vertices, GL_STATIC_DRAW);
@@ -706,17 +756,6 @@ void MyGLWidget::cutBBRight(int value)
     vertices[18] -= rstep;
     vertices[21] -= rstep;
 
-//    GLfloat vertices[24] = {
-//        0.0,       0.0, 0.0,
-//        0.0,       0.0, 1.0,
-//        0.0,       1.0, 0.0,
-//        0.0,       1.0, 1.0,
-//        1.0+rstep, 0.0, 0.0,
-//        1.0+rstep, 0.0, 1.0,
-//        1.0+rstep, 1.0, 0.0,
-//        1.0+rstep, 1.0, 1.0
-//    };
-
     glBindBuffer(GL_ARRAY_BUFFER, vertexdat);
     glBufferData(GL_ARRAY_BUFFER, 24*sizeof(GLfloat), vertices, GL_STATIC_DRAW);
     updateGL();
@@ -736,17 +775,6 @@ void MyGLWidget::cutBBTop(int value)
     vertices[11] -= tstep;
     vertices[17] -= tstep;
     vertices[23] -= tstep;
-
-//    GLfloat vertices[24] = {
-//        0.0, 0.0, 0.0,
-//        0.0, 0.0, 1.0+tstep,
-//        0.0, 1.0, 0.0,
-//        0.0, 1.0, 1.0+tstep,
-//        1.0, 0.0, 0.0,
-//        1.0, 0.0, 1.0+tstep,
-//        1.0, 1.0, 0.0,
-//        1.0, 1.0, 1.0+tstep
-//    };
 
     glBindBuffer(GL_ARRAY_BUFFER, vertexdat);
     glBufferData(GL_ARRAY_BUFFER, 24*sizeof(GLfloat), vertices, GL_STATIC_DRAW);
@@ -768,17 +796,6 @@ void MyGLWidget::cutBBBottom(int value)
     vertices[14] -= dstep;
     vertices[20] -= dstep;
 
-//    GLfloat vertices[24] = {
-//        0.0, 0.0, 0.0-dstep,
-//        0.0, 0.0, 1.0,
-//        0.0, 1.0, 0.0-dstep,
-//        0.0, 1.0, 1.0,
-//        1.0, 0.0, 0.0-dstep,
-//        1.0, 0.0, 1.0,
-//        1.0, 1.0, 0.0-dstep,
-//        1.0, 1.0, 1.0
-//    };
-
     glBindBuffer(GL_ARRAY_BUFFER, vertexdat);
     glBufferData(GL_ARRAY_BUFFER, 24*sizeof(GLfloat), vertices, GL_STATIC_DRAW);
     updateGL();
@@ -798,17 +815,6 @@ void MyGLWidget::cutBBFront(int value)
     vertices[4] -= fstep;
     vertices[13] -= fstep;
     vertices[16] -= fstep;
-
-//    GLfloat vertices[24] = {
-//        0.0, 0.0-fstep, 0.0,
-//        0.0, 0.0-fstep, 1.0,
-//        0.0, 1.0,       0.0,
-//        0.0, 1.0,       1.0,
-//        1.0, 0.0-fstep, 0.0,
-//        1.0, 0.0-fstep, 1.0,
-//        1.0, 1.0,       0.0,
-//        1.0, 1.0,       1.0
-//    };
 
     glBindBuffer(GL_ARRAY_BUFFER, vertexdat);
     glBufferData(GL_ARRAY_BUFFER, 24*sizeof(GLfloat), vertices, GL_STATIC_DRAW);
@@ -830,40 +836,10 @@ void MyGLWidget::cutBBBack(int value)
     vertices[19] -= bstep;
     vertices[22] -= bstep;
 
-//    GLfloat vertices[24] = {
-//        0.0, 0.0,       0.0,
-//        0.0, 0.0,       1.0,
-//        0.0, 1.0+bstep, 0.0,
-//        0.0, 1.0+bstep, 1.0,
-//        1.0, 0.0,       0.0,
-//        1.0, 0.0,       1.0,
-//        1.0, 1.0+bstep, 0.0,
-//        1.0, 1.0+bstep, 1.0
-//    };
-
     glBindBuffer(GL_ARRAY_BUFFER, vertexdat);
     glBufferData(GL_ARRAY_BUFFER, 24*sizeof(GLfloat), vertices, GL_STATIC_DRAW);
     updateGL();
 }
-
-    // front: 1 5 7 3 - 0,0,1 / 1,0,1 / 1,1,1 / 0,1,1
-    // back: 0 2 6 4  - 0,0,0 / 0,1,0 / 1,1,0 / 1,0,0
-    // left: 0 1 3 2  - 0,0,0 / 0,0,1 / 1,1,0 / 0,1,1
-    // right:7 5 4 6  - 1,1,1 / 1,0,1 / 1,0,0 / 1,1,0
-    // up: 2 3 7 6    - 0,1,0 / 0,1,1 / 1,1,1 / 1,1,0
-    // down: 1 0 4 5  - 0,0,1 / 0,0,0 / 1,0,0 / 1,0,1
-
-//    GLfloat vertices[24] = {
-//        0.0-lstep, 0.0-fstep, 0.0-dstep,
-//        0.0-lstep, 0.0-fstep, 1.0+ustep,
-//        0.0-lstep, 1.0+bstep, 0.0-dstep,
-//        0.0-lstep, 1.0+bstep, 1.0+ustep,
-//        1.0+rstep, 0.0-fstep, 0.0-dstep,
-//        1.0+rstep, 0.0-fstep, 1.0+ustep,
-//        1.0+rstep, 1.0+bstep, 0.0-dstep,
-//        1.0+rstep, 1.0+bstep, 1.0+ustep
-//    };
-
 
 // ============================================
 //
@@ -873,8 +849,6 @@ void MyGLWidget::cutBBBack(int value)
 MyGLWidget::MyGLWidget(QWidget *parent)
     : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
 {
-
-
     QGLFormat glFormat;
 
     glFormat.setVersion( 3, 3 );
@@ -886,16 +860,15 @@ MyGLWidget::MyGLWidget(QWidget *parent)
     glFormat.setDoubleBuffer(true);
     glFormat.setRgba(true);
 
-//    QTimer *timer = new QTimer(this);
-//    timer->setInterval(500);
-//    connect(timer, SIGNAL(timeout()), this, SLOT(rotateDisplay()));
-//    timer->start();
-
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
-//    rotationX = 0;
+
     rotationY = 0;
     rotationZ = 0;
+
+    elevationValue = 90;
+    azimuthValue = 0;
+    clipPlaneValueValue = 50.0f;
 }
 
 MyGLWidget::~MyGLWidget()
@@ -938,8 +911,8 @@ void MyGLWidget::initializeGL()
     // Original Volume
     //    g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/head256.raw", 256, 256, 225);
     // Other Volumes
-//    g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/brainix.raw", 512, 512, 22);
-    g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model2.raw", 512, 512, 58);
+    g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/brainix.raw", 512, 512, 22);
+//    g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model2.raw", 512, 512, 58);
 
     GL_ERROR();
     initFrameBuffer(g_bfTexObj, g_texWidth, g_texHeight);
@@ -948,7 +921,6 @@ void MyGLWidget::initializeGL()
 
 void MyGLWidget::paintGL()
 {
-    //    display();
     // the color of the vertex in the back face is also the location
     // of the vertex
     // save the back face to the user defined framebuffer bound
@@ -965,8 +937,6 @@ void MyGLWidget::paintGL()
     // as well as the location of primitives.
     // the most important is that we got the GLSL to exec the logic. Here we go!
     // draw the back face of the box
-    //    void display()
-    //    {
     glEnable(GL_DEPTH_TEST);
     // test the gl_error
     GL_ERROR();
@@ -990,8 +960,6 @@ void MyGLWidget::paintGL()
     render_gl(GL_BACK);
     glUseProgram(0);
     GL_ERROR();
-    //    glutSwapBuffers();
-    //    }
 }
 
 void MyGLWidget::resizeGL(int w, int h)
@@ -1000,6 +968,8 @@ void MyGLWidget::resizeGL(int w, int h)
     g_winHeight = h;
     g_texWidth = w;
     g_texHeight = h;
+//    initFrameBuffer(g_bfTexObj, g_texWidth, g_texHeight);
+    glViewport(0, 0, g_winWidth, g_winHeight);
 }
 
 // Records the position of the mouse when a button is initially pressed

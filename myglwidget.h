@@ -44,6 +44,12 @@ protected:
 public slots:
 //    void cutBoundBox(int value);
 
+//    void rcSetUinforms(int value);
+
+    void azimuthUniform(int value);
+    void elevationUniform(int value);
+    void clipPlaneDepthUniform(int value);
+
     void cutBBTop(int value);
     void cutBBBottom(int value);
     void cutBBLeft(int value);
