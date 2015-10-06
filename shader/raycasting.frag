@@ -14,6 +14,7 @@ layout (location = 0) out vec4 FragColor;
 
 const int numSamples = 1600;
 uniform float azimuth, elevation, clipPlaneDepth; //clipping plane variables
+uniform int clip;
 
 // Convert from Polar to Cartesian Coordinates
 vec3 p2cart(float azimuth, float elevation)
@@ -49,6 +50,9 @@ void main()
         //background need no raycasting
         discard;
 
+    //    vec3 rayStart = 0.1 * (EntryPoint + 0.5);
+    //    vec3 rayStop = 0.1 * (exitPoint + 0.5);
+
     vec3 rayStart = EntryPoint;
     vec3 rayStop = exitPoint;
     vec3 dir = rayStop - rayStart;
@@ -73,47 +77,55 @@ void main()
     float alphaSample; // The src alpha
     // backgroundColor
     //alpha = 1 means fully opaque while alpha = 0 means fully transparent
-    vec4 bgColor = vec4(1.0, 1.0, 1.0, 0.0);
+    vec4 bgColor = vec4(0.0, 0.0, 0.0, 0.0);
 
-    // if (clip)
-    //render the clipped surface invisible
-    FragColor.rgb = vec3(1.0, 1.0, 1.0);
-    FragColor.a = 1.0;
-    // see if clip plane faces viewer
-    bool frontface = (dot(dir , clipPlane) > 0.0);
-
-    // Dot product between 2 normalized vectors will give you a number that ranges from -1 to 1.
-    // 1 means that they are pointed the same way
-    // -1 means they are pointed opposite ways.
-    // 0 means they are perpendicular
-    // distance from ray origin to clip plane
-    float dis = dot(dir, clipPlane);
-
-    if (dis != 0.0)
+    if (clip == 1)
     {
-        dis = (-clipPlaneDepth - dot(clipPlane, rayStart.xyz-0.5)) / dis;
-    }
+        //render the clipped surface invisible
+        FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+        //    FragColor.a = 1.0;
+        // see if clip plane faces viewer
+        bool frontface = (dot(dir , clipPlane) > 0.0);
 
-    if ((!frontface) && (dis < 0.0)) return;
-    if ((frontface) && (dis > len)) return;
+        // Dot product between 2 normalized vectors will give you a number that ranges from -1 to 1.
+        // 1 means that they are pointed the same way
+        // -1 means they are pointed opposite ways.
+        // 0 means they are perpendicular
+        // distance from ray origin to clip plane
+        float dis = dot(dir, clipPlane);
 
-    if ((dis > 0.0) && (dis < len))
-    {
-        if (frontface)
+        if (dis != 0.0)
         {
-            rayStart = rayStart + dir * dis;
+            dis = (-clipPlaneDepth - dot(clipPlane, rayStart.xyz-0.5)) / dis;
         }
-        else
+
+        if ((!frontface) && (dis < 0.0))
         {
-            rayStop =  rayStart + dir * dis;
+            return;
         }
-    }
 
-    pos = rayStart;
-    deltaDir = normalize(rayStop - rayStart) * StepSize;
-    travel = distance(rayStop, rayStart);
-    deltaDirLen = length(deltaDir);
+        if ((frontface) && (dis > len))
+        {
+            return;
+        }
 
+        if ((dis > 0.0) && (dis < len))
+        {
+            if (frontface)
+            {
+                rayStart = rayStart + dir * dis;
+            }
+            else
+            {
+                rayStop =  rayStart + dir * dis;
+            }
+        }
+
+        pos = rayStart;
+        deltaDir = normalize(rayStop - rayStart) * StepSize;
+        travel = distance(rayStop, rayStart);
+        deltaDirLen = length(deltaDir);
+    } // End IF
 
     for (int i = 0; i < numSamples && travel > 0.0; ++i, pos += deltaDir, travel -= StepSize)
     {
@@ -130,22 +142,21 @@ void main()
         if (colorSample.a > 0.0)
         {
             // accomodate for variable sampling rates (base interval defined by mod_compositing.frag)
-            // StepSize = 0.001f
-            // 1 - (1 - colorSample.a ^0,2)
-            //            colorSample.a = 1.0 - (1 - (colorSample.a ^ (StepSize*200)))
+            // StepSize = 0.001f -- 1 - (1 - colorSample.a ^0,2)
             colorSample.a = 1.0 - pow(1.0 - colorSample.a, StepSize*200.0f);
             colorAcum.rgb += (1.0 - colorAcum.a) * colorSample.rgb * colorSample.a;
             colorAcum.a += (1.0 - colorAcum.a) * colorSample.a;
         }
 
-//         voxelCoord += deltaDir;
-//        voxelCoord += pos;
+        //         voxelCoord += deltaDir;
+        //        voxelCoord += pos;
         lengthAcum += deltaDirLen;
 
+        // terminate if opacity > 1 or the ray is outside the volume
         if (lengthAcum >= len )
         {
             colorAcum.rgb = colorAcum.rgb*colorAcum.a + (1 - colorAcum.a)*bgColor.rgb;
-            break;  // terminate if opacity > 1 or the ray is outside the volume
+            break;
         }
         if (colorAcum.a > 1.0)
         {
@@ -153,6 +164,7 @@ void main()
             break;
         }
     }
+
     FragColor = colorAcum;
 }
 

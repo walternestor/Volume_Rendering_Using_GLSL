@@ -71,6 +71,7 @@ QPoint lastPos;
 GLint elevationValue;
 GLint azimuthValue;
 GLfloat clipPlaneValueValue;
+GLint clipEnableValue;
 
 int checkForOpenGLError(const char* file, int line)
 {
@@ -283,7 +284,7 @@ GLuint initTFF1DTex(const char* filename)
         exit(EXIT_FAILURE);
     }
 
-    const int MAX_CNT = 10000;
+    const int MAX_CNT = 100000;
     GLubyte *tff = (GLubyte *) calloc(MAX_CNT, sizeof(GLubyte));
     inFile.read(reinterpret_cast<char *>(tff), MAX_CNT);
     if (inFile.eof())
@@ -379,11 +380,11 @@ GLuint initFace2DTex(GLuint bfTexWidth, GLuint bfTexHeight)
 // init 3D texture to store the volume data used fo ray casting
 GLuint initVol3DTex(const char* filename, GLuint w, GLuint h, GLuint d)
 {
-
     FILE *fp;
     size_t size = w * h * d;
     GLushort *data = new GLushort[size];			  // 16bit
     //    GLubyte *data = new GLubyte[size];			  // 8bit
+
     if (!(fp = fopen(filename, "rb")))
     {
         cout << "Error: opening .raw file failed" << endl;
@@ -402,6 +403,8 @@ GLuint initVol3DTex(const char* filename, GLuint w, GLuint h, GLuint d)
     {
         cout << "OK: read .raw file successed" << endl;
     }
+
+
     fclose(fp);
 
 
@@ -410,9 +413,9 @@ GLuint initVol3DTex(const char* filename, GLuint w, GLuint h, GLuint d)
     glBindTexture(GL_TEXTURE_3D, g_volTexObj);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);// REPEAT);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);// REPEAT);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);// REPEAT);
 
     // pixel transfer happens here from client to OpenGL server
     //    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -458,29 +461,27 @@ void initFrameBuffer(GLuint texObj, GLuint texWidth, GLuint texHeight)
     glEnable(GL_DEPTH_TEST);
 }
 
+void MyGLWidget::clipEnableUniform(bool checked)
+{
+    clipEnableValue = (GLint)checked;
+    updateGL();
+}
 
 void MyGLWidget::elevationUniform(int value)
 {
-    qDebug() << "Elevation" << value;
-
     elevationValue = value;
     updateGL();
 }
 
 void MyGLWidget::azimuthUniform(int value)
 {
-    qDebug() << "Azimuth" << value;
-
     azimuthValue = value;
     updateGL();
 }
 
 void MyGLWidget::clipPlaneDepthUniform(int value)
 {
-    qDebug() << "ClipPlaneDepth" << value;
-
     clipPlaneValueValue = ((float)value/100.0f);
-//    qDebug() << "ClipPlaneDepth FLOAT" << clipPlaneValueValue;
     updateGL();
 }
 
@@ -500,9 +501,7 @@ void rcSetUinforms()
     }
     else
     {
-        cout << "ScreenSize"
-             << "is not bind to the uniform"
-             << endl;
+        cout << "ScreenSize is not bind to the uniform" << endl;
     }
     GLint stepSizeLoc = glGetUniformLocation(g_programHandle, "StepSize");
     GL_ERROR();
@@ -513,11 +512,7 @@ void rcSetUinforms()
     }
     else
     {
-        qDebug() << "StepSize is not bind to the uniform";
-
-        cout << "StepSize"
-             << "is not bind to the uniform"
-             << endl;
+        cout << "StepSize is not bind to the uniform" << endl;
     }
     GL_ERROR();
     GLint transferFuncLoc = glGetUniformLocation(g_programHandle, "TransferFunc");
@@ -530,9 +525,7 @@ void rcSetUinforms()
     }
     else
     {
-        cout << "TransferFunc"
-             << "is not bind to the uniform"
-             << endl;
+        cout << "TransferFunc is not bind to the uniform" << endl;
     }
     GL_ERROR();
     GLint backFaceLoc = glGetUniformLocation(g_programHandle, "ExitPoints");
@@ -545,9 +538,7 @@ void rcSetUinforms()
     }
     else
     {
-        cout << "ExitPoints"
-             << "is not bind to the uniform"
-             << endl;
+        cout << "ExitPoints is not bind to the uniform" << endl;
     }
     GL_ERROR();
     GLint volumeLoc = glGetUniformLocation(g_programHandle, "VolumeTex");
@@ -562,9 +553,7 @@ void rcSetUinforms()
     {
         qDebug() << "VolumeTex is not bind to the uniform";
 
-        cout << "VolumeTex"
-             << "is not bind to the uniform"
-             << endl;
+        cout << "VolumeTex is not bind to the uniform" << endl;
     }
 
     GL_ERROR();
@@ -578,9 +567,7 @@ void rcSetUinforms()
     {
         qDebug() << "stepElevation is NOT bind to the uniform";
 
-        cout << "stepElevation"
-             << "is not bind to the uniform"
-             << endl;
+        cout << "stepElevation is not bind to the uniform" << endl;
     }
 
     GL_ERROR();
@@ -592,11 +579,7 @@ void rcSetUinforms()
     }
     else
     {
-        qDebug() << "stepAzimuth is NOT bind to the uniform";
-
-        cout << "stepAzimuth"
-             << "is not bind to the uniform"
-             << endl;
+        cout << "stepAzimuth is not bind to the uniform" << endl;
     }
 
     GL_ERROR();
@@ -608,12 +591,25 @@ void rcSetUinforms()
     }
     else
     {
+        cout << "stepAzimuth is not bind to the uniform" << endl;
+    }
+
+    GL_ERROR();
+    GLint stepClipEnable = glGetUniformLocation(g_programHandle, "clip");
+    if (stepClipEnable >= 0)
+    {
+        // Load data into uniform shader variable
+        glUniform1i(stepClipEnable, clipEnableValue);
+    }
+    else
+    {
         qDebug() << "stepAzimuth is NOT bind to the uniform";
 
         cout << "stepAzimuth"
              << "is not bind to the uniform"
              << endl;
     }
+
 }
 // init the shader object and shader program
 void initShader()
@@ -669,7 +665,7 @@ void linkShader(GLuint shaderPgm, GLuint newVertHandle, GLuint newFragHandle)
 void render_gl(GLenum cullFace)
 {
     GL_ERROR();
-    glClearColor(1.0f,1.0f,1.0f,1.0f);
+    glClearColor(0.0f,0.0f,0.0f,0.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     //  transform the box
     glm::mat4 projection = glm::perspective(45.0f, (GLfloat)g_winWidth/(GLfloat)g_winHeight, 0.1f, 100.f);
@@ -844,8 +840,6 @@ void MyGLWidget::cutBBBack(int value)
 // ============================================
 //
 // ============================================
-
-
 MyGLWidget::MyGLWidget(QWidget *parent)
     : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
 {
@@ -905,14 +899,14 @@ void MyGLWidget::initializeGL()
     initVBO();
     initShader();
     g_tffTexObj = initTFF1DTex("../../Volume_Rendering_Using_GLSL/tff.dat");
-    //    g_tffTexObj = initTFF1DTex("../../Volume_Rendering_Using_GLSL/tff2.txt");
+//    g_tffTexObj = initTFF1DTex("../../Volume_Rendering_Using_GLSL/dicom_rmi.tff");
     g_bfTexObj = initFace2DTex(g_texWidth, g_texHeight);
 
     // Original Volume
     //    g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/head256.raw", 256, 256, 225);
     // Other Volumes
-    g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/brainix.raw", 512, 512, 22);
-//    g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model2.raw", 512, 512, 58);
+//    g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/brainix.raw", 512, 512, 22);
+    g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model2.raw", 512, 512, 58);
 
     GL_ERROR();
     initFrameBuffer(g_bfTexObj, g_texWidth, g_texHeight);

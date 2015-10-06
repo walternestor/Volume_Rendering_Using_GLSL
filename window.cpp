@@ -22,6 +22,8 @@ Window::Window(QWidget *parent) :
     connect(ui->azimuthSlider, SIGNAL(valueChanged(int)), ui->myGLWidget, SLOT(azimuthUniform(int)));
     connect(ui->elevationSlider, SIGNAL(valueChanged(int)), ui->myGLWidget, SLOT(elevationUniform(int)));
     connect(ui->clipPlaneDepthSlider, SIGNAL(valueChanged(int)), ui->myGLWidget, SLOT(clipPlaneDepthUniform(int)));
+    connect(ui->clipCheckBox, SIGNAL(toggled(bool)), ui->myGLWidget, SLOT(clipEnableUniform(bool)));
+
 }
 
 //int Window::getSender(void)

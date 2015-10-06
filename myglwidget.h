@@ -45,6 +45,7 @@ public slots:
 //    void cutBoundBox(int value);
 
 //    void rcSetUinforms(int value);
+    void clipEnableUniform(bool checked);
 
     void azimuthUniform(int value);
     void elevationUniform(int value);
