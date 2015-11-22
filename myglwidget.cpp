@@ -1218,7 +1218,7 @@ void MyGLWidget::initializeGL()
     g_texHeight = g_winHeight;
     initVBO();
     initShader();
-    g_tffTexObj = initTFF1DTex("../../Volume_Rendering_Using_GLSL/tff.dat");
+//    g_tffTexObj = initTFF1DTex("../../Volume_Rendering_Using_GLSL/tff.dat");
     g_bfTexObj = initFace2DTex(g_texWidth, g_texHeight);
 
     //    g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model/head256.raw", 256, 256, 225);
