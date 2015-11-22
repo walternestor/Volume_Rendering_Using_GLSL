@@ -1,20 +1,32 @@
 #version 330
-// for raycasting
 
 in vec3 EntryPoint;
 in vec4 ExitPointCoord;
 
+// Deprecated
+uniform sampler1D TransferFunc;
+
 uniform sampler2D ExitPoints;
 uniform sampler3D VolumeTex;
-uniform sampler1D TransferFunc;  
 uniform float     StepSize;
 uniform vec2      ScreenSize;
+// Intensity Control
+uniform float     intensityMin, intensityMax;
+// TFF
+uniform float     redCenter, redWidth;
+uniform float     greenCenter, greenWidth;
+uniform float     blueCenter, blueWidth;
+uniform float     alphaCenter, alphaWidth;
+
+uniform int renderType;
+
+// Clip Plane
+uniform float     azimuth, elevation, clipPlaneDepth;
+uniform int clip;
+
 layout (location = 0) out vec4 FragColor;
-//out vec4 FragColor;
 
 const int numSamples = 1600;
-uniform float azimuth, elevation, clipPlaneDepth; //clipping plane variables
-uniform int clip;
 
 // Convert from Polar to Cartesian Coordinates
 vec3 p2cart(float azimuth, float elevation)
@@ -29,7 +41,6 @@ vec3 p2cart(float azimuth, float elevation)
     y = sin( azi ) * k;
     x = cos( azi ) * k;
 
-    //    return vec3( x, z, y );
     return vec3( x, y, z );
 }
 
@@ -50,9 +61,6 @@ void main()
         //background need no raycasting
         discard;
 
-    //    vec3 rayStart = 0.1 * (EntryPoint + 0.5);
-    //    vec3 rayStop = 0.1 * (exitPoint + 0.5);
-
     vec3 rayStart = EntryPoint;
     vec3 rayStop = exitPoint;
     vec3 dir = rayStop - rayStart;
@@ -61,29 +69,33 @@ void main()
     float len = length(dir);
     dir = normalize(dir);
 
-    vec3 deltaDir = dir * StepSize; // -- Step
-    //    vec3 step = dir * StepSize;
+    vec3  deltaDir = dir * StepSize; // -- Step
     float deltaDirLen = length(deltaDir);
-    vec3 voxelCoord = EntryPoint;
     float travel = distance(rayStop, rayStart);
+
     vec3 pos = rayStart;
+    vec3 voxelCoord = EntryPoint;
 
     vec4 colorAcum = vec4(0.0); // The dest color
-    float alphaAcum = 0.0;                // The  dest alpha for blending
+    float alphaAcum = 0.0;      // The  dest alpha for blending
     float intensity;
     float lengthAcum = 0.0;
     float stepLength = 0.0;
-    vec4 colorSample; // The src color
-    float alphaSample; // The src alpha
+    vec4 colorSample;           // The src color
+    float alphaSample;          // The src alpha
+
     // backgroundColor
     //alpha = 1 means fully opaque while alpha = 0 means fully transparent
     vec4 bgColor = vec4(0.0, 0.0, 0.0, 0.0);
 
+    // ===================================================================
+    // Clip Plane
+    // ===================================================================
     if (clip == 1)
     {
         //render the clipped surface invisible
         FragColor = vec4(0.0, 0.0, 0.0, 0.0);
-        //    FragColor.a = 1.0;
+
         // see if clip plane faces viewer
         bool frontface = (dot(dir , clipPlane) > 0.0);
 
@@ -94,29 +106,23 @@ void main()
         // distance from ray origin to clip plane
         float dis = dot(dir, clipPlane);
 
-        if (dis != 0.0)
-        {
+        if (dis != 0.0) {
             dis = (-clipPlaneDepth - dot(clipPlane, rayStart.xyz-0.5)) / dis;
         }
 
-        if ((!frontface) && (dis < 0.0))
-        {
+        if ((!frontface) && (dis < 0.0)) {
             return;
         }
 
-        if ((frontface) && (dis > len))
-        {
+        if ((frontface) && (dis > len)) {
             return;
         }
 
-        if ((dis > 0.0) && (dis < len))
-        {
-            if (frontface)
-            {
+        if ((dis > 0.0) && (dis < len)) {
+            if (frontface) {
                 rayStart = rayStart + dir * dis;
             }
-            else
-            {
+            else {
                 rayStop =  rayStart + dir * dis;
             }
         }
@@ -127,43 +133,57 @@ void main()
         deltaDirLen = length(deltaDir);
     } // End IF
 
-    for (int i = 0; i < numSamples && travel > 0.0; ++i, pos += deltaDir, travel -= StepSize)
+    // ===================================================================
+    // Accumulatin Loop
+    // ===================================================================
+    for (int i = 0; i < numSamples && travel > 0.0; ++i, pos += deltaDir, travel -= StepSize, lengthAcum += deltaDirLen)
     {
         //float intensity
-        // -- tf_pos
         intensity =  texture(VolumeTex, pos).x;
+        // The src color
+        // colorSample = texture(TransferFunc, intensity);
 
-        // vec4 colorSample; // The src color
-        // -- value
-        colorSample = texture(TransferFunc, intensity);
+        // ===================================================================
+        // Direct Volume Rendering - Grayscale
+        // ===================================================================
+        if (renderType == 1) {
+            float rgba = ((intensity - redCenter + (redWidth / 2)) / redWidth);
+            colorSample.rgba = vec4(rgba, rgba, rgba, rgba);
+        }
+
+        // ===================================================================
+        // Direct Volume Rendering - RGBA
+        // ===================================================================
+        else { // if (renderType == 2) {
+            colorSample.r = ((intensity - redCenter   + (redWidth   / 2)) / redWidth)  ;
+            colorSample.g = ((intensity - greenCenter + (greenWidth / 2)) / greenWidth)  ;
+            colorSample.b = ((intensity - blueCenter  + (blueWidth  / 2)) / blueWidth)  ;
+            colorSample.a = ((intensity - alphaCenter + (alphaWidth / 2)) / alphaWidth);
+            //                colorSample.a = (colorSample.r + colorSample.g + colorSample.b) / 3;
+        }
 
         // modulate the value of colorSample.a
         // front-to-back integration
-        if (colorSample.a > 0.0)
-        {
+        if (colorSample.a > 0.0) {
             // accomodate for variable sampling rates (base interval defined by mod_compositing.frag)
-            // StepSize = 0.001f -- 1 - (1 - colorSample.a ^0,2)
-            colorSample.a = 1.0 - pow(1.0 - colorSample.a, StepSize*200.0f);
+            colorSample.a = 1.0 - pow(1.0 - colorSample.a, StepSize * 200.0f);
             colorAcum.rgb += (1.0 - colorAcum.a) * colorSample.rgb * colorSample.a;
             colorAcum.a += (1.0 - colorAcum.a) * colorSample.a;
         }
 
-        //         voxelCoord += deltaDir;
-        //        voxelCoord += pos;
-        lengthAcum += deltaDirLen;
-
-        // terminate if opacity > 1 or the ray is outside the volume
-        if (lengthAcum >= len )
+        // terminate if the ray is outside the volume
+        if (lengthAcum >= len)
         {
             colorAcum.rgb = colorAcum.rgb*colorAcum.a + (1 - colorAcum.a)*bgColor.rgb;
             break;
-        }
-        if (colorAcum.a > 1.0)
+        } // end if (lengthAcum >= len )
+
+        else if (colorAcum.a > 1.0)
         {
             colorAcum.a = 1.0;
             break;
         }
-    }
+    } // end for
 
     FragColor = colorAcum;
 }
