@@ -1,6 +1,8 @@
 
 ##volume rendering using ray casting algorithm ##
 
+Not Updated!!
+
 - This project is a demo to implement the volume rendering using Raycasting algorithm with modern OpenGL API and the shading language glsl.
 - Written in C++ but in C style, just to explain the notation of Raycasting algorithm.
 - To compile it, you need MinGW and Gnu Make and g++, only support Windows platform currently, it would be trivial to port to Linux platform.
