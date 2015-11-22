@@ -5,6 +5,12 @@
 
 #include <QWidget>
 #include <QSlider>
+#include <QColorDialog>
+#include <stdio.h>
+
+//#define QT_NO_OPENGL
+//#include "qcustomplot.h"
+//#undef QT_NO_OPENGL
 
 namespace Ui {
 class Window;
@@ -18,16 +24,29 @@ public:
     explicit Window(QWidget *parent = 0);
     ~Window();
 
-//    int getSender(void);
+    void plot();
+    void eqHistogram();
+    void nonEqHistogram();
 
-    QSlider *topSlider;
-    QSlider *bottomSlider;
+
+
+public slots:
+    void plotHistogram(QVector<double> key, QVector<double> nonEqValue, QVector<double> eqValue, QVector<double> lutValue);
+
+//    QVector<double> takeKeyValue();
+
 
 protected:
     void keyPressEvent(QKeyEvent *event);
 
+private slots:
+
+
+    void on_histPushButton_clicked();
+
 private:
     Ui::Window *ui;
+
 };
 
 #endif // WINDOW_H

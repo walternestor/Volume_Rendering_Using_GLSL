@@ -1,23 +1,21 @@
 
-// TODO: Implement histogram
-
 // TODO: Implement/improve TF
 
-// 20151001
-// TODO: Improve/correct bug - cutting/culling functions
-
+//#include <omp.h>
 
 // Program Includes
 #include "myglwidget.h"
 
 // Qt Includes
 #include <QDebug>
+#include <QColor>
 
 // C/C++ includes
 #include <iostream>
 #include <fstream>
 #include <cstdio>
 #include <cstdlib>
+#include <stdio.h>
 
 // GLM includes
 #include <glm/glm.hpp>
@@ -48,6 +46,10 @@ GLuint g_rcVertHandle;
 GLuint g_rcFragHandle;
 GLuint g_bfVertHandle;
 GLuint g_bfFragHandle;
+
+GLuint g_rcIsoFragHandle;
+
+
 float g_stepSize = 0.001f;
 GLuint vertexdat;
 
@@ -65,13 +67,50 @@ GLfloat vertices[24] = {
 // Mouse Controls
 GLfloat rotationY;
 GLfloat rotationZ;
-QPoint lastPos;
+QPoint  lastPos;
 
 // Clip Plane Controls
-GLint elevationValue;
-GLint azimuthValue;
-GLfloat clipPlaneValueValue;
-GLint clipEnableValue;
+GLint   elevationValue;
+GLint   azimuthValue;
+GLint   clipEnableValue;
+GLfloat clipPlaneValue;
+
+// Transfer Function
+// Red
+GLfloat redCenter;
+GLfloat redWidth;
+// Green
+GLfloat greenCenter;
+GLfloat greenWidth;
+// Blue
+GLfloat blueCenter;
+GLfloat blueWidth;
+// Alpha
+GLfloat alphaCenter;
+GLfloat alphaWidth;
+
+// Intensity Control
+GLfloat intensityMin;
+GLfloat intensityMax;
+GLint renderType;
+
+
+QVector< double > keyGraphValue;
+QVector< double > nonEqValue;
+QVector< double > eqValue;
+QVector< double > lutValue;
+
+int size;
+// Ray Picking
+//GLubyte *read_data = new GLubyte[size];			  // 16bit
+GLubyte read_data[4];
+GLfloat mpx;
+GLfloat mpy;
+GLubyte pickedcolor[4];
+GLfloat prev_x;
+GLfloat prev_y;
+
+
 
 int checkForOpenGLError(const char* file, int line)
 {
@@ -99,20 +138,21 @@ GLuint initVol3DTex(const char* filename, GLuint width, GLuint height, GLuint de
 void render_gl(GLenum cullFace);
 void linkShader(GLuint shaderPgm, GLuint newVertHandle, GLuint newFragHandle);
 
+
 // init the vertex buffer object
 void initVBO()
 {
 
-//    GLfloat vertices[24] = {
-//        0.0, 0.0, 0.0,
-//        0.0, 0.0, 1.0,
-//        0.0, 1.0, 0.0,
-//        0.0, 1.0, 1.0,
-//        1.0, 0.0, 0.0,
-//        1.0, 0.0, 1.0,
-//        1.0, 1.0, 0.0,
-//        1.0, 1.0, 1.0
-//    };
+    //    GLfloat vertices[24] = {
+    //        0.0, 0.0, 0.0,
+    //        0.0, 0.0, 1.0,
+    //        0.0, 1.0, 0.0,
+    //        0.0, 1.0, 1.0,
+    //        1.0, 0.0, 0.0,
+    //        1.0, 0.0, 1.0,
+    //        1.0, 1.0, 0.0,
+    //        1.0, 1.0, 1.0
+    //    };
 
     // draw the six faces of the boundbox by drawwing triangles
     // draw it contra-clockwise
@@ -192,6 +232,7 @@ GLboolean compileCheck(GLuint shader)
     }
     return err;
 }
+
 // init shader object
 GLuint initShaderObj(const GLchar* srcfile, GLenum shaderType)
 {
@@ -203,7 +244,7 @@ GLuint initShaderObj(const GLchar* srcfile, GLenum shaderType)
         exit(EXIT_FAILURE);
     }
 
-    const int MAX_CNT = 10000;
+    const int MAX_CNT = 1000000;
     GLchar *shaderCode = (GLchar *) calloc(MAX_CNT, sizeof(GLchar));
     inFile.read(shaderCode, MAX_CNT);
     if (inFile.eof())
@@ -272,97 +313,6 @@ GLuint createShaderPgm()
     return programHandle;
 }
 
-
-// init the 1 dimentional texture for transfer function
-GLuint initTFF1DTex(const char* filename)
-{
-    // read in the user defined data of transfer function
-    ifstream inFile(filename, ifstream::in);
-    if (!inFile)
-    {
-        cerr << "Error openning file: " << filename << endl;
-        exit(EXIT_FAILURE);
-    }
-
-    const int MAX_CNT = 100000;
-    GLubyte *tff = (GLubyte *) calloc(MAX_CNT, sizeof(GLubyte));
-    inFile.read(reinterpret_cast<char *>(tff), MAX_CNT);
-    if (inFile.eof())
-    {
-        size_t bytecnt = inFile.gcount();
-        *(tff + bytecnt) = '\0'; // --> Null Terminator
-        cout << "bytecnt " << bytecnt << endl;
-    }
-    else if(inFile.fail())
-    {
-        cout << filename << "read failed " << endl;
-    }
-    else
-    {
-        cout << filename << "is too large" << endl;
-    }
-
-//        GLubyte tff[4096*4];
-//        int j = 0;
-//        for (int i = 0; i < 4095; i+=4)
-//        {
-//            if (i < 40)
-//            {
-//                tff[j++] = ((i*0.91f/(float)4096)*255);  //R
-//                tff[j++] = ((i*0.7f/(float)4096)*255);   // G
-//                tff[j++] = ((i*0.61f/(float)4096)*255);  // B
-//                tff[j++] = 0; //((i*0.0f/(float)4096)*255); // A
-//            }
-//            else if (i >= 41 && i < 60)
-//            {
-//                tff[j++] = ((i*0.91f/(float)4096)*255); //R
-//                tff[j++] = ((i*0.7f/(float)4096)*255);  // G
-//                tff[j++] = ((i*0.61f/(float)4096)*255); // B
-//                tff[j++] = 0.0f;//((i*0.2f/(float)4096)*255);  // A
-//            }
-//            else if (i >= 61 && i < 80)
-//            {
-//                tff[j++] = ((i*0.91f/(float)4096)*255); //R
-//                tff[j++] = ((i*0.7f/(float)4096)*255);  // G
-//                tff[j++] = ((i*0.61f/(float)4096)*255); // B
-//                tff[j++] = 0;
-//            }
-//            else if (i >= 61 && i < 80)
-//            {
-//                tff[j++] = ((i*0.91f/(float)4096)*255); //R
-//                tff[j++] = ((i*0.7f/(float)4096)*255);  // G
-//                tff[j++] = ((i*0.61f/(float)4096)*255); // B
-//                tff[j++] = 0;
-//            }
-//            else if (i >= 81 && i < 200)
-//            {
-//                tff[j++] = ((i*1.0f/(float)4096)*255);
-//                tff[j++] = ((i*1.0f/(float)4096)*255);
-//                tff[j++] = ((i*0.85f/(float)4096)*255);
-//                tff[j++] = 200;//((i*0.9f/(float)4096)*255);  // A
-//            }
-//    //        else
-//    //        {
-//    //            tff[j++] = ((i*1.0f/(float)4096)*255);
-//    //            tff[j++] = ((i*1.0f/(float)4096)*255);
-//    //            tff[j++] = ((i*0.85f/(float)4096)*255);
-//    //            tff[j++] = ((i*1.0f/(float)4096)*255);  // A
-//    //        }
-//        }
-
-    GLuint tff1DTex;
-    glGenTextures(1, &tff1DTex);
-    glBindTexture(GL_TEXTURE_1D, tff1DTex);
-    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA8, 256, 0, GL_RGBA, GL_UNSIGNED_BYTE, tff);
-//    glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA8, 256*4, 0, GL_RGBA, GL_UNSIGNED_BYTE, tff);
-    free(tff);
-    return tff1DTex;
-}
-
 // init the 2D texture for render backface 'bf', stands for backface
 GLuint initFace2DTex(GLuint bfTexWidth, GLuint bfTexHeight)
 {
@@ -377,12 +327,34 @@ GLuint initFace2DTex(GLuint bfTexWidth, GLuint bfTexHeight)
     return backFace2DTex;
 }
 
+
+QVector<double> MyGLWidget::keyValue()
+{
+    return keyGraphValue;
+}
+
+QVector<double> MyGLWidget::equalizedValue()
+{
+    return eqValue;
+}
+
+QVector<double> MyGLWidget::nonEqualizedValue()
+{
+    return nonEqValue;
+}
+
+QVector<double> MyGLWidget::lutEqualizedValue()
+{
+    return lutValue;
+}
+
 // init 3D texture to store the volume data used fo ray casting
 GLuint initVol3DTex(const char* filename, GLuint w, GLuint h, GLuint d)
 {
     FILE *fp;
-    size_t size = w * h * d;
+    size = w * h * d;
     GLushort *data = new GLushort[size];			  // 16bit
+
     //    GLubyte *data = new GLubyte[size];			  // 8bit
 
     if (!(fp = fopen(filename, "rb")))
@@ -394,7 +366,8 @@ GLuint initVol3DTex(const char* filename, GLuint w, GLuint h, GLuint d)
     {
         cout << "OK: open .raw file successed" << endl;
     }
-    if ( fread(data, sizeof(char), size, fp)!= size)
+    //    if ( fread(data, sizeof(char), size, fp)!= size)     // 8bit
+    if ( fread(data, sizeof(GLushort), size, fp)!= size) // 16bit
     {
         cout << "Error: read .raw file failed" << endl;
         exit(1);
@@ -404,8 +377,117 @@ GLuint initVol3DTex(const char* filename, GLuint w, GLuint h, GLuint d)
         cout << "OK: read .raw file successed" << endl;
     }
 
-
     fclose(fp);
+
+    // =====================================================================
+    // Histogram Equalization
+    // =====================================================================
+    // Histogram Variables
+    int histSize = 65535;
+    unsigned int sum = 0;
+    GLushort *eqHistogram = new GLushort[histSize];
+    GLushort *histogram = new GLushort[histSize];
+    GLushort *hist_eq   = new GLushort[size];			  // 16bit
+    GLushort *lut       = new GLushort[size];			  // 16bit
+
+    float MAX_INTENSITY = 65536.0f;         // max value in 16-bit image
+    float scale;
+
+    FILE *eqHistogramFile;
+    FILE *histogramFile;
+    FILE *dataFile;
+    FILE *lutFile;
+
+    //     initialize all intensity values to 0
+    #pragma omp parallel for
+    for (int i = 0; i < histSize; i++)
+    {
+        histogram[i] = 0;
+        eqHistogram[i] = 0;
+    }
+
+    #pragma omp for ordered
+    for (int i = 0; i < size; i++)
+    {
+//        data[i] = (data[i] >> 8) | (data[i] << 8);
+        // calculate the Nº of pixels for each intensity values
+        // traverse all pixels and accumulate the count of same intensity values
+        histogram[data[i]]++;
+
+
+        // Find max intensity that not necessarilly is 65536
+        if (data[i] > MAX_INTENSITY)
+        {
+            MAX_INTENSITY = data[i];
+        }
+    }
+
+    MAX_INTENSITY = 65536.0f;
+    scale = MAX_INTENSITY / size;    // scale factor ,so the values in LUT are from 0 to MAX_VALUE
+
+//    qDebug() << "Max Intensity" << MAX_INTENSITY;
+//    qDebug() << "scale" << scale;
+//    qDebug() << "fixed" << (float)65536.0f/size;
+//    qDebug() << "fixed 4096" << (float)4096.0f/size;
+
+    #pragma omp for ordered
+    for (int i = 0; i < histSize; i++)
+    {
+        // cumulative sum is used as LUT
+        sum += histogram[i];
+        // build look-up table
+        lut[i] += (sum * scale);
+
+        // Used in the Histogram graphs
+        keyGraphValue.append(i);
+        nonEqValue.append(static_cast<double>(histogram[i]));
+        lutValue.append(static_cast<double>(lut[i]));
+    }
+
+    //        dataFile = fopen("../../Volume_Rendering_Using_GLSL/dataFile.txt","wt");
+    //        lutFile = fopen("../../Volume_Rendering_Using_GLSL/lutFile.txt","wt");
+    //        histogramFile = fopen("../../Volume_Rendering_Using_GLSL/histogramFile.txt","wt");
+    //        eqHistogramFile = fopen("../../Volume_Rendering_Using_GLSL/eqhistogramFile.txt","wt");
+
+    #pragma omp for ordered
+    for (int i = 0; i < size; i++)
+    {
+        hist_eq[i] = (GLushort)lut[data[i]];
+
+        //        fprintf(dataFile,"%d : %d\n",i, data[i]);
+        //        fprintf(eqHistogramFile,"%d : %d\n",i, hist_eq[i]);
+    }
+
+    // Histogram Equalized
+    #pragma omp for ordered
+    for (int i = 0; i < histSize; i++)
+    {
+        //        data[i] = (data[i] >> 8) | (data[i] << 8);
+        // calculate the Nº of pixels for each intensity values
+        // traverse all pixels and accumulate the count of same intensity values
+        eqHistogram[hist_eq[i]]++;
+    }
+
+    #pragma omp for ordered
+    for (int i = 0; i < histSize; i++)
+    {
+        eqValue.append(static_cast<double>(eqHistogram[i]));
+    }
+
+    //        #pragma omp for ordered
+    //        for (int i = 0; i < histSize; i++) {
+    //            fprintf(histogramFile,"%d : %d\n",i, histogram[i]);
+    //            fprintf(lutFile,"%d : %d\n",i, lut[i]);
+    //        }
+
+    //        fclose(dataFile);
+    //        fclose(eqHistogramFile);
+    //        fclose(lutFile);
+    //        fclose(histogramFile);
+
+    delete [] lut;
+    delete [] histogram;
+    // =====================================================================
 
 
     glGenTextures(1, &g_volTexObj);
@@ -413,22 +495,23 @@ GLuint initVol3DTex(const char* filename, GLuint w, GLuint h, GLuint d)
     glBindTexture(GL_TEXTURE_3D, g_volTexObj);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);// REPEAT);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);// REPEAT);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);// REPEAT);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); //
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); // GL_REPEAT
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE); // GL_REPEAT
 
     // pixel transfer happens here from client to OpenGL server
-    //    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+//    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+//    glTexImage3D(GL_TEXTURE_3D, 0, GL_INTENSITY16, w, h, d, 0, GL_RED, GL_UNSIGNED_SHORT, hist_eq);
+    delete [] hist_eq;
 
     // Need to swap bytes due to endianness of the DICOM file
-    glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
-
-//    glTexImage3D(GL_TEXTURE_3D, 0, GL_INTENSITY, w, h, d, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE,data);
+////    glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glTexImage3D(GL_TEXTURE_3D, 0, GL_INTENSITY16, w, h, d, 0, GL_RED, GL_UNSIGNED_SHORT, data);
 
-    GL_ERROR();
 
-    delete []data;
+    GL_ERROR();
+    delete [] data;
     cout << "volume texture created" << endl;
     return g_volTexObj;
 }
@@ -481,7 +564,7 @@ void MyGLWidget::azimuthUniform(int value)
 
 void MyGLWidget::clipPlaneDepthUniform(int value)
 {
-    clipPlaneValueValue = ((float)value/100.0f);
+    clipPlaneValue = ((float)value/100.0f);
     updateGL();
 }
 
@@ -501,7 +584,7 @@ void rcSetUinforms()
     }
     else
     {
-        cout << "ScreenSize is not bind to the uniform" << endl;
+//        cout << "ScreenSize is not bind to the uniform" << endl;
     }
     GLint stepSizeLoc = glGetUniformLocation(g_programHandle, "StepSize");
     GL_ERROR();
@@ -512,20 +595,21 @@ void rcSetUinforms()
     }
     else
     {
-        cout << "StepSize is not bind to the uniform" << endl;
+//        cout << "StepSize is not bind to the uniform" << endl;
     }
     GL_ERROR();
     GLint transferFuncLoc = glGetUniformLocation(g_programHandle, "TransferFunc");
     if (transferFuncLoc >= 0)
     {
         glActiveTexture(GL_TEXTURE0);
+
         glBindTexture(GL_TEXTURE_1D, g_tffTexObj);
         // Load data into uniform shader variable
         glUniform1i(transferFuncLoc, 0);
     }
     else
     {
-        cout << "TransferFunc is not bind to the uniform" << endl;
+//        cout << "TransferFunc is not bind to the uniform" << endl;
     }
     GL_ERROR();
     GLint backFaceLoc = glGetUniformLocation(g_programHandle, "ExitPoints");
@@ -538,7 +622,7 @@ void rcSetUinforms()
     }
     else
     {
-        cout << "ExitPoints is not bind to the uniform" << endl;
+//        cout << "ExitPoints is not bind to the uniform" << endl;
     }
     GL_ERROR();
     GLint volumeLoc = glGetUniformLocation(g_programHandle, "VolumeTex");
@@ -551,9 +635,9 @@ void rcSetUinforms()
     }
     else
     {
-        qDebug() << "VolumeTex is not bind to the uniform";
+//        qDebug() << "VolumeTex is not bind to the uniform";
 
-        cout << "VolumeTex is not bind to the uniform" << endl;
+//        cout << "VolumeTex is not bind to the uniform" << endl;
     }
 
     GL_ERROR();
@@ -565,9 +649,9 @@ void rcSetUinforms()
     }
     else
     {
-        qDebug() << "stepElevation is NOT bind to the uniform";
+//        qDebug() << "stepElevation is NOT bind to the uniform";
 
-        cout << "stepElevation is not bind to the uniform" << endl;
+//        cout << "stepElevation is not bind to the uniform" << endl;
     }
 
     GL_ERROR();
@@ -579,7 +663,7 @@ void rcSetUinforms()
     }
     else
     {
-        cout << "stepAzimuth is not bind to the uniform" << endl;
+//        cout << "stepAzimuth is not bind to the uniform" << endl;
     }
 
     GL_ERROR();
@@ -587,11 +671,11 @@ void rcSetUinforms()
     if (stepClipPlaneDepth >= 0)
     {
         // Load data into uniform shader variable
-        glUniform1f(stepClipPlaneDepth, clipPlaneValueValue);
+        glUniform1f(stepClipPlaneDepth, clipPlaneValue);
     }
     else
     {
-        cout << "stepAzimuth is not bind to the uniform" << endl;
+//        cout << "stepAzimuth is not bind to the uniform" << endl;
     }
 
     GL_ERROR();
@@ -603,14 +687,143 @@ void rcSetUinforms()
     }
     else
     {
-        qDebug() << "stepAzimuth is NOT bind to the uniform";
+//        qDebug() << "stepAzimuth is NOT bind to the uniform";
 
-        cout << "stepAzimuth"
-             << "is not bind to the uniform"
-             << endl;
+//        cout << "stepAzimuth is not bind to the uniform" << endl;
     }
 
+    //=========================================================================
+    // Intensity Control
+    //=========================================================================
+    GL_ERROR();
+    GLint intensityMinValue = glGetUniformLocation(g_programHandle, "intensityMin");
+    if (intensityMinValue >= 0) {
+        // Load data into uniform shader variable
+        glUniform1f(intensityMinValue, intensityMin);
+    }
+    else {
+//        qDebug() << "intensityMin is NOT bind to the uniform";
+//        cout << "intensityMin is not bind to the uniform" << endl;
+    }
+
+    GL_ERROR();
+    GLint intensityMaxValue = glGetUniformLocation(g_programHandle, "intensityMax");
+    if (intensityMaxValue >= 0) {
+        // Load data into uniform shader variable
+        glUniform1f(intensityMaxValue, intensityMax);
+    }
+    else {
+//        qDebug() << "intensityMax is NOT bind to the uniform";
+//        cout << "intensityMax is not bind to the uniform" << endl;
+    }
+
+    //=========================================================================
+    // TFF
+    //=========================================================================
+    // Red
+    GL_ERROR();
+    GLint redCenterValue = glGetUniformLocation(g_programHandle, "redCenter");
+    if (redCenterValue >= 0) {
+        // Load data into uniform shader variable
+        glUniform1f(redCenterValue, redCenter);
+    }
+    else {
+//        qDebug() << "redCenterValue is NOT bind to the uniform";
+//        cout << "redCenterValue is not bind to the uniform" << endl;
+    }
+
+    GL_ERROR();
+    GLint redWidthValue = glGetUniformLocation(g_programHandle, "redWidth");
+    if (redWidthValue >= 0) {
+        // Load data into uniform shader variable
+        glUniform1f(redWidthValue, redWidth);
+    }
+    else {
+//        qDebug() << "redWidth is NOT bind to the uniform";
+//        cout << "redWidth is not bind to the uniform" << endl;
+    }
+
+    // Green
+    GL_ERROR();
+    GLint greenCenterValue = glGetUniformLocation(g_programHandle, "greenCenter");
+    if (greenCenterValue >= 0) {
+        // Load data into uniform shader variable
+        glUniform1f(greenCenterValue, greenCenter);
+    }
+    else {
+//        qDebug() << "greenCenter is NOT bind to the uniform";
+//        cout << "greenCenter is not bind to the uniform" << endl;
+    }
+
+    GL_ERROR();
+    GLint greenWidthValue = glGetUniformLocation(g_programHandle, "greenWidth");
+    if (greenWidthValue >= 0) {
+        // Load data into uniform shader variable
+        glUniform1f(greenWidthValue, greenWidth);
+    }
+    else {
+//        qDebug() << "greenWidth is NOT bind to the uniform";
+//        cout << "greenWidth is not bind to the uniform" << endl;
+    }
+
+    // Blue
+    GL_ERROR();
+    GLint blueCenterValue = glGetUniformLocation(g_programHandle, "blueCenter");
+    if (blueCenterValue >= 0) {
+        // Load data into uniform shader variable
+        glUniform1f(blueCenterValue, blueCenter);
+    }
+    else {
+//        qDebug() << "blueCenter is NOT bind to the uniform";
+//        cout << "blueCenter is not bind to the uniform" << endl;
+    }
+
+    GL_ERROR();
+    GLint blueWidthValue = glGetUniformLocation(g_programHandle, "blueWidth");
+    if (blueWidthValue >= 0) {
+        // Load data into uniform shader variable
+        glUniform1f(blueWidthValue, blueWidth);
+    }
+    else {
+//        qDebug() << "blueWidth is NOT bind to the uniform";
+//        cout << "blueWidth is not bind to the uniform" << endl;
+    }
+
+    // Alpha
+    GL_ERROR();
+    GLint alphaCenterValue = glGetUniformLocation(g_programHandle, "alphaCenter");
+    if (alphaCenterValue >= 0) {
+        // Load data into uniform shader variable
+        glUniform1f(alphaCenterValue, alphaCenter);
+    }
+    else {
+//        qDebug() << "alphaCenter is NOT bind to the uniform";
+//        cout << "alphaCenter is not bind to the uniform" << endl;
+    }
+
+    GL_ERROR();
+    GLint alphaWidthValue = glGetUniformLocation(g_programHandle, "alphaWidth");
+    if (alphaWidthValue >= 0) {
+        // Load data into uniform shader variable
+        glUniform1f(alphaWidthValue, alphaWidth);
+    }
+    else {
+//        qDebug() << "alphaWidth is NOT bind to the uniform";
+//        cout << "alphaWidth is not bind to the uniform" << endl;
+    }
+
+    GL_ERROR();
+    GLint renderTypeValue = glGetUniformLocation(g_programHandle, "renderType");
+    if (renderTypeValue >= 0) {
+        // Load data into uniform shader variable
+        glUniform1i(renderTypeValue, renderType);
+    }
+    else {
+//        qDebug() << "renderType is NOT bind to the uniform";
+//        cout << "renderType is not bind to the uniform" << endl;
+    }
 }
+
 // init the shader object and shader program
 void initShader()
 {
@@ -622,6 +835,12 @@ void initShader()
     g_rcVertHandle = initShaderObj("../../Volume_Rendering_Using_GLSL/shader/raycasting.vert", GL_VERTEX_SHADER);
     // fragment shader object for second pass
     g_rcFragHandle = initShaderObj("../../Volume_Rendering_Using_GLSL/shader/raycasting.frag", GL_FRAGMENT_SHADER);
+
+    g_rcVertHandle = initShaderObj("../../Volume_Rendering_Using_GLSL/shader/raycasting.vert", GL_VERTEX_SHADER);
+    // fragment shader object for second pass
+    g_rcIsoFragHandle = initShaderObj("../../Volume_Rendering_Using_GLSL/shader/raycast_iso_super.frag", GL_FRAGMENT_SHADER);
+
+
     // create the shader program , use it in an appropriate time
     g_programHandle = createShaderPgm();
 }
@@ -668,7 +887,8 @@ void render_gl(GLenum cullFace)
     glClearColor(0.0f,0.0f,0.0f,0.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     //  transform the box
-    glm::mat4 projection = glm::perspective(45.0f, (GLfloat)g_winWidth/(GLfloat)g_winHeight, 0.1f, 100.f);
+    glm::mat4 projection = glm::perspective(45.0f, (GLfloat)g_winWidth/g_winHeight, 1.0f, 100.f);
+    //    glm::mat4 projection = glm::perspective(15.0f, (GLfloat)g_winWidth/(GLfloat)g_winHeight, 1.0f, 100.f);
     glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 2.0f),
                                  glm::vec3(0.0f, 0.0f, 0.0f),
                                  glm::vec3(0.0f, 1.0f, 0.0f));
@@ -682,7 +902,7 @@ void render_gl(GLenum cullFace)
     model *= glm::rotate(180.0f, vec3(1.0f, 0.0f, 0.0f));
 
     // Add zoom option with it or change de FOV value, best approach?
-//    model *= glm::scale(glm::mat4(1.0f),glm::vec3(2.0f,2.0f,2.0f));
+    //    model *= glm::scale(glm::mat4(1.0f),glm::vec3(1.2f, 1.2f, 1.2f));
 
     model *= glm::translate(glm::vec3(-0.5f, -0.5f, -0.5f));
 
@@ -712,9 +932,126 @@ void render_gl(GLenum cullFace)
     GL_ERROR();
 }
 
-// ==============
-//
-// ==============
+// ============================================================================
+// Transfer Function
+// ============================================================================
+// Red
+void MyGLWidget::redWidthUniform(int value)
+{
+    redWidth = (GLfloat) (value / 65536.0f) * 2.0f;
+//    qDebug() << "redWidth" << redWidth;
+    updateGL();
+}
+
+void MyGLWidget::redCenterUniform(int value)
+{
+    redCenter = (GLfloat) (value / 65536.0f);
+//    qDebug() << "redCenter" << redCenter;
+    updateGL();
+}
+
+// Green
+void MyGLWidget::greenWidthUniform(int value)
+{
+    greenWidth = (GLfloat) (value / 65536.0f) * 2.0f;
+//    qDebug() << "greenWidth" << greenWidth;
+    updateGL();
+}
+
+void MyGLWidget::greenCenterUniform(int value)
+{
+    greenCenter = (GLfloat) (value / 65536.0f);
+//    qDebug() << "greenCenter" << greenCenter;
+    updateGL();
+}
+
+// Blue
+void MyGLWidget::blueWidthUniform(int value)
+{
+    blueWidth = (GLfloat) (value / 65536.0f) * 2.0f;
+//    qDebug() << "blueWidth" << blueWidth;
+    updateGL();
+}
+
+void MyGLWidget::blueCenterUniform(int value)
+{
+    blueCenter = (GLfloat) (value / 65536.0f);
+//    qDebug() << "blueCenter" << blueCenter;
+    updateGL();
+}
+
+// Alpha
+void MyGLWidget::alphaWidthUniform(int value)
+{
+    alphaWidth = (GLfloat) (value / 65536.0f) * 2.0f;
+//    qDebug() << "alphaWidth" << alphaWidth;
+    updateGL();
+}
+
+void MyGLWidget::alphaCenterUniform(int value)
+{
+    alphaCenter = (GLfloat) (value / 65536.0f);
+//    qDebug() << "alphaCenter" << alphaCenter;
+    updateGL();
+}
+
+// ============================================================================
+// Intesity Control
+// ============================================================================
+void MyGLWidget::intensityMaxSliderUniform(int value)
+{
+    intensityMax = (GLfloat) (value / 65536.0f);
+    qDebug() << "intensityMax" << intensityMax;
+    updateGL();
+}
+
+void MyGLWidget::intensityMinSliderUniform(int value)
+{
+    intensityMin = (GLfloat) (value / 65536.0f);
+    qDebug() << "intensityMin" << intensityMin;
+    updateGL();
+}
+
+// init the 1 dimentional texture for transfer function
+GLuint initTFF1DTex(const char* filename)
+{
+    //     read in the user defined data of transfer function
+    ifstream inFile(filename, ifstream::in);
+    if (!inFile) {
+        cerr << "Error openning file: " << filename << endl;
+        exit(EXIT_FAILURE);
+    }
+
+    const int MAX_CNT = 100000;
+    GLubyte *tff = (GLubyte *) calloc(MAX_CNT, sizeof(GLubyte));
+    inFile.read(reinterpret_cast<char *>(tff), MAX_CNT);
+    if (inFile.eof()) {
+        size_t bytecnt = inFile.gcount();
+        *(tff + bytecnt) = '\0'; // --> Null Terminator
+        cout << "bytecnt " << bytecnt << endl;
+    }
+    else if(inFile.fail()) {
+        cout << filename << "read failed " << endl;
+    }
+    else {
+        cout << filename << "is too large" << endl;
+    }
+
+    glGenTextures(1, &g_tffTexObj);
+    glBindTexture(GL_TEXTURE_1D, g_tffTexObj);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_REPEAT); // GL_CLAMP_TO_EDGE
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); //
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST); //GL_LINEAR
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA8, 256, 0, GL_RGBA, GL_UNSIGNED_BYTE, tff);
+    free(tff);
+    return g_tffTexObj;
+
+}
+
+// ===================================
+// Boundung Box Clipping Planes
+// ===================================
 void MyGLWidget::cutBBLeft(int value)
 {
     std::cout << value << endl;
@@ -837,54 +1174,37 @@ void MyGLWidget::cutBBBack(int value)
     updateGL();
 }
 
-// ============================================
-//
-// ============================================
-MyGLWidget::MyGLWidget(QWidget *parent)
-    : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
+
+// ============================================================================
+// Render Options
+// ============================================================================
+void MyGLWidget::keyPressed(int key)
 {
-    QGLFormat glFormat;
+    qDebug() << "Key" << key;
+    switch (key)
+    {
+        case 1: renderType = 1; break;
+        std::cout << "Direct Volume Rendering - Grayscale" << endl;
 
-    glFormat.setVersion( 3, 3 );
-    glFormat.setProfile( QGLFormat::CoreProfile ); /**< Requires >=Qt-4.8.0 */
-    glFormat.setSampleBuffers( true );
-    glFormat.setAlpha(true);
-    glFormat.setAccum(true);
-    glFormat.setDepth(true);
-    glFormat.setDoubleBuffer(true);
-    glFormat.setRgba(true);
+        case 2: renderType = 2; break;
+        std::cout << "Direct Volume Rendering - RGBA" << endl;
 
-    setMouseTracking(true);
-    setFocusPolicy(Qt::StrongFocus);
+        case 3: renderType = 3; break;
+        std::cout << "3 - Direct Surface Rendering" << endl;
 
-    rotationY = 0;
-    rotationZ = 0;
+        case 4: renderType = 4; break;
+        std::cout << "4 - Normal Vector Coloring" << endl;
 
-    elevationValue = 90;
-    azimuthValue = 0;
-    clipPlaneValueValue = 50.0f;
-}
-
-MyGLWidget::~MyGLWidget()
-{
-}
-
-QSize MyGLWidget::minimumSizeHint() const
-{
-    return QSize(50, 50);
-}
-
-QSize MyGLWidget::sizeHint() const
-{
-    return QSize(400, 400);
+        case 5: renderType = 5; break;
+        std::cout << "5 - Normal Vector Coloring (Absolute)" << endl;
+    }
+    updateGL();
 }
 
 void MyGLWidget::initializeGL()
 {
-    /// Initialize the opengl extension entry points
-    //#ifdef _CORE_PROFILE
-    glewExperimental = GL_TRUE; /**< GLEW setting some functions as unsupported */
-    //#endif
+    // Initialize the opengl extension entry points
+    glewExperimental = GL_TRUE;
 
     GLenum glewError = glewInit();
 
@@ -899,14 +1219,16 @@ void MyGLWidget::initializeGL()
     initVBO();
     initShader();
     g_tffTexObj = initTFF1DTex("../../Volume_Rendering_Using_GLSL/tff.dat");
-//    g_tffTexObj = initTFF1DTex("../../Volume_Rendering_Using_GLSL/dicom_rmi.tff");
     g_bfTexObj = initFace2DTex(g_texWidth, g_texHeight);
 
-    // Original Volume
-    //    g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/head256.raw", 256, 256, 225);
-    // Other Volumes
-//    g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/brainix.raw", 512, 512, 22);
-    g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model2.raw", 512, 512, 58);
+    //    g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model/head256.raw", 256, 256, 225);
+//        g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model/brainix.raw", 512, 512, 22);
+//            g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model/model2.raw", 512, 512, 58);
+//        g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model/phenix_COU_IV.raw", 512, 512, 361);
+
+    g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model/phenix_os.raw", 512, 512, 361);
+
+    //        g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model/matrix_ANATOMIE_VAISSEAUX_BAS_65.raw", 395, 1503, 1);
 
     GL_ERROR();
     initFrameBuffer(g_bfTexObj, g_texWidth, g_texHeight);
@@ -943,11 +1265,39 @@ void MyGLWidget::paintGL()
     render_gl(GL_FRONT);
     glUseProgram(0);
     GL_ERROR();
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glViewport(0, 0, g_winWidth, g_winHeight);
-    linkShader(g_programHandle, g_rcVertHandle, g_rcFragHandle);
-    GL_ERROR();
-    glUseProgram(g_programHandle);
+
+    if (renderType == 3 || renderType == 4 || renderType == 5)
+    {
+//        qDebug() << "3 - Direct Surface Rendering";
+//        qDebug() << "4 - Normal Vector Coloring";
+//        qDebug() << "5 - Normal Vector Coloring (Absolute)";
+
+        glReadPixels(mpx, mpy, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, read_data);
+        GL_ERROR();
+
+        qDebug() << "Picked Color[0] - RED   - " << read_data[0];
+        qDebug() << "Picked Color[1] - GREEN - " << read_data[1];
+        qDebug() << "Picked Color[2] - BLUE  - " << read_data[2];
+        qDebug() << "Picked Color[3] - ALPHA - " << read_data[3];
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, g_winWidth, g_winHeight);
+        linkShader(g_programHandle, g_rcVertHandle, g_rcIsoFragHandle);
+        GL_ERROR();
+        glUseProgram(g_programHandle);
+    }
+    else
+    {
+//        qDebug() << "1 - Direct Volume Rendering - Grayscale";
+//        qDebug() << "2 - Direct Volume Rendering - RGBA";
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, g_winWidth, g_winHeight);
+        linkShader(g_programHandle, g_rcVertHandle, g_rcFragHandle);
+        GL_ERROR();
+        glUseProgram(g_programHandle);
+    }
+
     rcSetUinforms();
     GL_ERROR();
     // cull back face
@@ -958,12 +1308,72 @@ void MyGLWidget::paintGL()
 
 void MyGLWidget::resizeGL(int w, int h)
 {
+    // Do NOT resize 3D Volume
+    w = 400;
+    h = 400;
+
     g_winWidth = w;
     g_winHeight = h;
     g_texWidth = w;
     g_texHeight = h;
-//    initFrameBuffer(g_bfTexObj, g_texWidth, g_texHeight);
     glViewport(0, 0, g_winWidth, g_winHeight);
+}
+
+// ============================================
+//
+// ============================================
+MyGLWidget::MyGLWidget(QWidget *parent)
+    : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
+{
+    QGLFormat glFormat;
+
+    glFormat.setVersion( 3, 3 );
+    glFormat.setProfile( QGLFormat::CoreProfile );
+    glFormat.setSampleBuffers(true);
+    glFormat.setAlpha(true);
+    glFormat.setAccum(true);
+    glFormat.setDepth(true);
+    glFormat.setDoubleBuffer(true);
+    glFormat.setRgba(true);
+
+    setMouseTracking(true);
+    setFocusPolicy(Qt::StrongFocus);
+
+    // Mouse Rotation
+    rotationY = 0;
+    rotationZ = 0;
+
+    // Clip Plane Sliders
+    elevationValue = 90;
+    azimuthValue = 0;
+    clipPlaneValue = 50.0f;
+
+    // Transfer Function Sliders
+    redCenter = 32768.0f;
+    redWidth = 16384.0f;
+    greenCenter = 32768.0f;
+    greenWidth = 16384.0f;
+    blueCenter = 32768.0f;
+    blueWidth = 16384.0f;
+
+    // Intensity Control
+    intensityMin = 0.0f;
+    intensityMax = 65536.0f;
+
+    renderType = 1;
+}
+
+MyGLWidget::~MyGLWidget()
+{}
+
+QSize MyGLWidget::minimumSizeHint() const
+{
+    return QSize(50, 50);
+}
+
+QSize MyGLWidget::sizeHint() const
+{
+    return QSize(400, 400);
 }
 
 // Records the position of the mouse when a button is initially pressed
@@ -974,8 +1384,8 @@ void MyGLWidget::mousePressEvent(QMouseEvent *event)
 
 void MyGLWidget::mouseMoveEvent(QMouseEvent *event)
 {
-    GLfloat dx = (GLfloat) (event->x() - lastPos.x());
-    GLfloat dy = (GLfloat) (event->y() - lastPos.y());
+    float dx = (float) (event->x() - lastPos.x());
+    float dy = (float) (event->y() - lastPos.y());
 
     if (event->buttons() & Qt::LeftButton)
     {
@@ -983,5 +1393,21 @@ void MyGLWidget::mouseMoveEvent(QMouseEvent *event)
         rotationZ += 0.01f * dy;
         update();
     }
+    if (event->buttons() & Qt::RightButton)
+    {
+        QTransform t;
+        t.scale(1, -1);
+        t.translate(0, -height()+1);
+        QPoint pos = event->pos() * t;
+
+        mpx = pos.x();
+        mpy = pos.y();
+
+//        qDebug() << "x" << pos.x();
+//        qDebug() << "y" << pos.y();
+
+        updateGL();
+    }
+
     lastPos = event->pos();
 }

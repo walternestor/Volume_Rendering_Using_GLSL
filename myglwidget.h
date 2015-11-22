@@ -15,20 +15,30 @@
 #include <glew.h>
 #endif
 
-#include <QTimer>
+#include <stdio.h>
+
 #include <QKeyEvent>
 #include <QGLWidget>
 #include <QGLBuffer>
-//#include <QGLShaderProgram>
+#include <QMouseEvent>
+#include <QTransform>
 
 #include "window.h"
 
 class MyGLWidget : public QGLWidget
 {
     Q_OBJECT
+
+
 public:
     explicit MyGLWidget(QWidget *parent = 0);
     ~MyGLWidget();
+
+    QVector<double> equalizedValue();
+    QVector<double> nonEqualizedValue();
+    QVector<double> keyValue();
+    QVector<double> lutEqualizedValue();
+
 signals:
 
 protected:
@@ -42,23 +52,38 @@ protected:
     void mouseMoveEvent(QMouseEvent *event);
 
 public slots:
-//    void cutBoundBox(int value);
+    void keyPressed(int key);
 
-//    void rcSetUinforms(int value);
+    // Aplha
+    void alphaWidthUniform(int value);
+    void alphaCenterUniform(int value);
+    // Red
+    void redWidthUniform(int value);
+    void redCenterUniform(int value);
+    // Green
+    void greenWidthUniform(int value);
+    void greenCenterUniform(int value);
+    // Blue
+    void blueWidthUniform(int value);
+    void blueCenterUniform(int value);
+
+    // Intensity Control
+    void intensityMaxSliderUniform(int value);
+    void intensityMinSliderUniform(int value);
+
+    // Free Clip Plane
     void clipEnableUniform(bool checked);
-
     void azimuthUniform(int value);
     void elevationUniform(int value);
     void clipPlaneDepthUniform(int value);
 
+    // Bounding Box Clip Planes
     void cutBBTop(int value);
     void cutBBBottom(int value);
     void cutBBLeft(int value);
     void cutBBRight(int value);
     void cutBBFront(int value);
     void cutBBBack(int value);
-
-signals:
 
 private:
 
