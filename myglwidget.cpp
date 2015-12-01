@@ -47,8 +47,10 @@ GLuint g_rcFragHandle;
 GLuint g_bfVertHandle;
 GLuint g_bfFragHandle;
 
+GLuint g_rcGrayFragShaderHandle;
+GLuint g_rcRGBAFragShaderHandle;
 GLuint g_rcIsoFragHandle;
-
+GLuint g_rcDirectSurfaceFragShaderHandle;
 
 float g_stepSize = 0.001f;
 GLuint vertexdat;
@@ -831,15 +833,25 @@ void initShader()
     g_bfVertHandle = initShaderObj("../../Volume_Rendering_Using_GLSL/shader/backface.vert", GL_VERTEX_SHADER);
     // fragment shader object for first pass
     g_bfFragHandle = initShaderObj("../../Volume_Rendering_Using_GLSL/shader/backface.frag", GL_FRAGMENT_SHADER);
+
     // vertex shader object for second pass
     g_rcVertHandle = initShaderObj("../../Volume_Rendering_Using_GLSL/shader/raycasting.vert", GL_VERTEX_SHADER);
-    // fragment shader object for second pass
-    g_rcFragHandle = initShaderObj("../../Volume_Rendering_Using_GLSL/shader/raycasting.frag", GL_FRAGMENT_SHADER);
 
-    g_rcVertHandle = initShaderObj("../../Volume_Rendering_Using_GLSL/shader/raycasting.vert", GL_VERTEX_SHADER);
-    // fragment shader object for second pass
-    g_rcIsoFragHandle = initShaderObj("../../Volume_Rendering_Using_GLSL/shader/raycast_iso_super.frag", GL_FRAGMENT_SHADER);
 
+    // fragment shader object for second pass
+    //g_rcFragHandle = initShaderObj("../../Volume_Rendering_Using_GLSL/shader/raycasting.frag", GL_FRAGMENT_SHADER);
+
+    // Surface Rendering
+    // fragment shader object for second pass - Iso Superficie
+    g_rcIsoFragHandle = initShaderObj("../../Volume_Rendering_Using_GLSL/shader/raycasting_direct_surface_vector_color_render.frag", GL_FRAGMENT_SHADER);
+    // fragment shader object for second pass - Iso Superficie
+    g_rcDirectSurfaceFragShaderHandle = initShaderObj("../../Volume_Rendering_Using_GLSL/shader/raycasting_direct_surface_render.frag", GL_FRAGMENT_SHADER);
+
+    // Volume Rendering
+    // fragment shader object for second pass - Ray Casting Grayscale Volume Rendering
+    g_rcGrayFragShaderHandle = initShaderObj("../../Volume_Rendering_Using_GLSL/shader/raycasting_gray.frag", GL_FRAGMENT_SHADER);
+    // fragment shader object for second pass - Ray Casting RGBA Volume Rendering
+    g_rcRGBAFragShaderHandle = initShaderObj("../../Volume_Rendering_Using_GLSL/shader/raycasting_rgba.frag", GL_FRAGMENT_SHADER);
 
     // create the shader program , use it in an appropriate time
     g_programHandle = createShaderPgm();
@@ -1001,14 +1013,14 @@ void MyGLWidget::alphaCenterUniform(int value)
 void MyGLWidget::intensityMaxSliderUniform(int value)
 {
     intensityMax = (GLfloat) (value / 65536.0f);
-    qDebug() << "intensityMax" << intensityMax;
+//    qDebug() << "intensityMax" << intensityMax;
     updateGL();
 }
 
 void MyGLWidget::intensityMinSliderUniform(int value)
 {
     intensityMin = (GLfloat) (value / 65536.0f);
-    qDebug() << "intensityMin" << intensityMin;
+//    qDebug() << "intensityMin" << intensityMin;
     updateGL();
 }
 
@@ -1046,7 +1058,6 @@ GLuint initTFF1DTex(const char* filename)
     glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA8, 256, 0, GL_RGBA, GL_UNSIGNED_BYTE, tff);
     free(tff);
     return g_tffTexObj;
-
 }
 
 // ===================================
@@ -1266,9 +1277,57 @@ void MyGLWidget::paintGL()
     glUseProgram(0);
     GL_ERROR();
 
-    if (renderType == 3 || renderType == 4 || renderType == 5)
+    if (renderType == 1)
     {
-//        qDebug() << "3 - Direct Surface Rendering";
+        cout << "1 - Direct Volume Rendering (Grayscale) Selected" << endl;
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, g_winWidth, g_winHeight);
+        linkShader(g_programHandle, g_rcVertHandle, g_rcGrayFragShaderHandle);
+        GL_ERROR();
+        glUseProgram(g_programHandle);
+    }
+    else if (renderType == 2)
+    {
+        cout << "2 - Direct Volume Rendering (RGBA) Selected" << endl;
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, g_winWidth, g_winHeight);
+        linkShader(g_programHandle, g_rcVertHandle, g_rcRGBAFragShaderHandle);
+        GL_ERROR();
+        glUseProgram(g_programHandle);
+    }
+
+
+    //=========================================================================
+    //
+    //=========================================================================
+    //glReadPixels(mpx, mpy, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, read_data);
+    //GL_ERROR();
+
+//        qDebug() << "Picked Color[0] - RED   - " << read_data[0];
+//        qDebug() << "Picked Color[1] - GREEN - " << read_data[1];
+//        qDebug() << "Picked Color[2] - BLUE  - " << read_data[2];
+//        qDebug() << "Picked Color[3] - ALPHA - " << read_data[3];
+
+    //=========================================================================
+    //
+    //=========================================================================
+
+
+    if (renderType == 3)
+    {
+        cout << "2 - 3 - Direct Surface Rendering Selected" << endl;
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, g_winWidth, g_winHeight);
+        linkShader(g_programHandle, g_rcVertHandle, g_rcDirectSurfaceFragShaderHandle);
+        GL_ERROR();
+        glUseProgram(g_programHandle);
+    }
+
+    if (renderType == 4 || renderType == 5)
+    {
 //        qDebug() << "4 - Normal Vector Coloring";
 //        qDebug() << "5 - Normal Vector Coloring (Absolute)";
 
@@ -1286,17 +1345,7 @@ void MyGLWidget::paintGL()
         GL_ERROR();
         glUseProgram(g_programHandle);
     }
-    else
-    {
-//        qDebug() << "1 - Direct Volume Rendering - Grayscale";
-//        qDebug() << "2 - Direct Volume Rendering - RGBA";
 
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glViewport(0, 0, g_winWidth, g_winHeight);
-        linkShader(g_programHandle, g_rcVertHandle, g_rcFragHandle);
-        GL_ERROR();
-        glUseProgram(g_programHandle);
-    }
 
     rcSetUinforms();
     GL_ERROR();

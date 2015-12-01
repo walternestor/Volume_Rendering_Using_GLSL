@@ -1,7 +1,5 @@
 #version 330
 
-
-
 in vec3 EntryPoint;
 in vec4 ExitPointCoord;
 
@@ -20,8 +18,6 @@ uniform float     cutstate;
 uniform float     cutplanepos;
 
 out vec4 FragColor;
-
-uniform int renderType;
 
 uniform float     intensityMin, intensityMax;
 uniform float     redCenter, redWidth;
@@ -193,36 +189,22 @@ void main()
             float specularLight = pow(max(dot(H,N),0),shininess);
             vec3 specular = Ks*lightColor*specularLight;
 
-            if (renderType == 3)
+            if (abs(Ntemp.x) <= 0.001 && abs(Ntemp.y) <= 0.001 && abs(Ntemp.z) <= 0.001)
             {
-                if (abs(Ntemp.x) <= 0.001 && abs(Ntemp.y) <= 0.001 && abs(Ntemp.z) <= 0.001)
-                {
-                    colorAcum.rgb = colorSample.rgb * matcolor;
-                }
-                else
-                {
-                    colorAcum.rgb += ambient + diffuse * matcolor + specular;
-                }
-                colorAcum.a += surfacealpha+0.01;
+                colorAcum.rgb = colorSample.rgb * matcolor;
             }
+            else
+            {
+                colorAcum.rgb += ambient + diffuse * matcolor + specular;
+            }
+            colorAcum.a += surfacealpha+0.01;
 
-            if (renderType == 4)
-            {
-                colorAcum.rgb = N;
-                colorAcum.a = surfacealpha+0.01;
-            }
-
-            if (renderType == 5)
-            {
-                colorAcum.rgb = abs(N);
-                colorAcum.a = surfacealpha+0.01;
-            }
 
             voxelBoundary = pos;
         } // end if (colorSample.a > intensityMin && colorSample.a < intensityMax)
 
 
-        voxelCoord += deltaDir;
+//        voxelCoord += deltaDir;
 //        lengthAcum += deltaDirLen;
 
         if (lengthAcum >= len )
@@ -248,10 +230,7 @@ void main()
             vec3 specular = Ks*lightColor*specularLight;
             colorBoundary.rgb = ambient + diffuse*matcolor + specular;
 
-            if (renderType == 3 || renderType == 4)
-            {
-                colorAcum.rgb = colorAcum.rgb + colorBoundary.rgb;
-            }
+            colorAcum.rgb = colorAcum.rgb + colorBoundary.rgb;
 
             colorAcum.rgb = colorAcum.rgb*colorAcum.a  + (1.0 - colorAcum.a)*bgColor.rgb;
             break;
