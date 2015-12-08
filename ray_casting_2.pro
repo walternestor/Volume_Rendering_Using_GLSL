@@ -39,6 +39,7 @@ DISTFILES += \
 
  INCLUDEPATH += "C:\Users\walter\Desktop\Qt\ray_casting_2\include"
  INCLUDEPATH += "C:\Libraries\glew-1.13.0\include"
+# INCLUDEPATH += "C:\Program Files (x86)\GDCM 2.4\include\gdcm-2.4"
  LIBS        += -L"C:\Libraries\glew-1.13.0\lib" -lglew32
  LIBS        += -lopengl32
  LIBS        += -lglu32

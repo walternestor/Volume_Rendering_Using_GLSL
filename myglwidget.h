@@ -39,6 +39,11 @@ public:
     QVector<double> keyValue();
     QVector<double> lutEqualizedValue();
 
+//    GLuint initVol3DTex(const char* filename, int fileSize);
+    GLuint initVol3DTex(const char* filename, GLuint w, GLuint h, GLuint d);
+
+
+
 signals:
 
 protected:

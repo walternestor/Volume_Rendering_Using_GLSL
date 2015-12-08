@@ -102,7 +102,7 @@ QVector< double > nonEqValue;
 QVector< double > eqValue;
 QVector< double > lutValue;
 
-int size;
+//int size;
 // Ray Picking
 //GLubyte *read_data = new GLubyte[size];			  // 16bit
 GLubyte read_data[4];
@@ -136,7 +136,7 @@ void initShader();
 void initFrameBuffer(GLuint, GLuint, GLuint);
 GLuint initTFF1DTex(const char* filename);
 GLuint initFace2DTex(GLuint texWidth, GLuint texHeight);
-GLuint initVol3DTex(const char* filename, GLuint width, GLuint height, GLuint depth);
+//GLuint initVol3DTex(const char* filename, GLuint width, GLuint height, GLuint depth);
 void render_gl(GLenum cullFace);
 void linkShader(GLuint shaderPgm, GLuint newVertHandle, GLuint newFragHandle);
 
@@ -351,10 +351,12 @@ QVector<double> MyGLWidget::lutEqualizedValue()
 }
 
 // init 3D texture to store the volume data used fo ray casting
-GLuint initVol3DTex(const char* filename, GLuint w, GLuint h, GLuint d)
+GLuint MyGLWidget::initVol3DTex(const char* filename, GLuint w, GLuint h, GLuint d)
+//GLuint MyGLWidget::initVol3DTex(const char* filename, int fileSize)
 {
     FILE *fp;
-    size = w * h * d;
+    int size = w * h * d;
+//    int size = fileSize;
     GLushort *data = new GLushort[size];			  // 16bit
 
     //    GLubyte *data = new GLubyte[size];			  // 8bit
@@ -910,7 +912,6 @@ void render_gl(GLenum cullFace)
     model *= glm::rotate((float)rotationY, glm::vec3(0.0f, 1.0f, 0.0f));
     model *= glm::rotate((float)rotationZ, glm::vec3(1.0f, 0.0f, 0.0f));
 
-    // to make the "head256.raw" i.e. the volume data stand up.
     model *= glm::rotate(180.0f, vec3(1.0f, 0.0f, 0.0f));
 
     // Add zoom option with it or change de FOV value, best approach?
@@ -1195,19 +1196,19 @@ void MyGLWidget::keyPressed(int key)
     switch (key)
     {
         case 1: renderType = 1; break;
-        std::cout << "Direct Volume Rendering - Grayscale" << endl;
+        qDebug() << "Direct Volume Rendering - Grayscale" << endl;
 
         case 2: renderType = 2; break;
-        std::cout << "Direct Volume Rendering - RGBA" << endl;
+        qDebug() << "Direct Volume Rendering - RGBA" << endl;
 
         case 3: renderType = 3; break;
-        std::cout << "3 - Direct Surface Rendering" << endl;
+        qDebug() << "3 - Direct Surface Rendering" << endl;
 
         case 4: renderType = 4; break;
-        std::cout << "4 - Normal Vector Coloring" << endl;
+        qDebug() << "4 - Normal Vector Coloring" << endl;
 
         case 5: renderType = 5; break;
-        std::cout << "5 - Normal Vector Coloring (Absolute)" << endl;
+        qDebug() << "5 - Normal Vector Coloring (Absolute)" << endl;
     }
     updateGL();
 }
@@ -1237,9 +1238,7 @@ void MyGLWidget::initializeGL()
 //            g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model/model2.raw", 512, 512, 58);
 //        g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model/phenix_COU_IV.raw", 512, 512, 361);
 
-    g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model/phenix_os.raw", 512, 512, 361);
-
-    //        g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model/matrix_ANATOMIE_VAISSEAUX_BAS_65.raw", 395, 1503, 1);
+    //g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model/phenix_os.raw", 512, 512, 361);
 
     GL_ERROR();
     initFrameBuffer(g_bfTexObj, g_texWidth, g_texHeight);
@@ -1422,7 +1421,7 @@ QSize MyGLWidget::minimumSizeHint() const
 
 QSize MyGLWidget::sizeHint() const
 {
-    return QSize(400, 400);
+    return QSize(800, 800);
 }
 
 // Records the position of the mouse when a button is initially pressed

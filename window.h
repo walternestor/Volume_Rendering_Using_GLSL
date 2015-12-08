@@ -8,6 +8,8 @@
 #include <QColorDialog>
 #include <stdio.h>
 
+//#include "gdcmImageReader.h"
+
 //#define QT_NO_OPENGL
 //#include "qcustomplot.h"
 //#undef QT_NO_OPENGL
@@ -43,6 +45,8 @@ private slots:
 
 
     void on_histPushButton_clicked();
+    void on_loadRAWButton_clicked();    
+    void on_loadPushButton_clicked();
 
 private:
     Ui::Window *ui;
