@@ -1233,12 +1233,11 @@ void MyGLWidget::initializeGL()
 //    g_tffTexObj = initTFF1DTex("../../Volume_Rendering_Using_GLSL/tff.dat");
     g_bfTexObj = initFace2DTex(g_texWidth, g_texHeight);
 
-    //    g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model/head256.raw", 256, 256, 225);
-//        g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model/brainix.raw", 512, 512, 22);
-//            g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model/model2.raw", 512, 512, 58);
-//        g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model/phenix_COU_IV.raw", 512, 512, 361);
-
-    //g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model/phenix_os.raw", 512, 512, 361);
+    // g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model/head256.raw", 256, 256, 225);
+    // g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model/brainix.raw", 512, 512, 22);
+    // g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model/model2.raw", 512, 512, 58);
+    // g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model/phenix_COU_IV.raw", 512, 512, 361);
+    // g_volTexObj = initVol3DTex("../../Volume_Rendering_Using_GLSL/model/phenix_os.raw", 512, 512, 361);
 
     GL_ERROR();
     initFrameBuffer(g_bfTexObj, g_texWidth, g_texHeight);
@@ -1421,7 +1420,7 @@ QSize MyGLWidget::minimumSizeHint() const
 
 QSize MyGLWidget::sizeHint() const
 {
-    return QSize(800, 800);
+    return QSize(500, 500);
 }
 
 // Records the position of the mouse when a button is initially pressed

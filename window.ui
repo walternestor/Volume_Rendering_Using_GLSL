@@ -862,7 +862,7 @@
            <x>10</x>
            <y>10</y>
            <width>911</width>
-           <height>351</height>
+           <height>311</height>
           </rect>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_5">
@@ -874,8 +874,8 @@
         <widget class="QPushButton" name="histPushButton">
          <property name="geometry">
           <rect>
-           <x>180</x>
-           <y>380</y>
+           <x>10</x>
+           <y>330</y>
            <width>141</width>
            <height>23</height>
           </rect>
@@ -893,13 +893,13 @@
          <property name="geometry">
           <rect>
            <x>20</x>
-           <y>60</y>
+           <y>50</y>
            <width>91</width>
-           <height>31</height>
+           <height>51</height>
           </rect>
          </property>
          <property name="text">
-          <string>Select RAW</string>
+          <string>Select RAW File</string>
          </property>
         </widget>
         <widget class="QLineEdit" name="widthLineEdit">
@@ -938,14 +938,14 @@
         <widget class="QPushButton" name="loadPushButton">
          <property name="geometry">
           <rect>
-           <x>60</x>
+           <x>50</x>
            <y>150</y>
-           <width>191</width>
-           <height>23</height>
+           <width>211</width>
+           <height>31</height>
           </rect>
          </property>
          <property name="text">
-          <string>Load File</string>
+          <string>Load 3D Volume</string>
          </property>
         </widget>
         <widget class="QLabel" name="label_10">
@@ -1002,7 +1002,6 @@
          <height>200</height>
         </size>
        </property>
-       <zorder>clipColorWidget</zorder>
       </widget>
      </item>
     </layout>

@@ -117,6 +117,8 @@ void Window::plotHistogram(QVector<double> key, QVector<double> nonEq, QVector<d
 {
     QCustomPlot *histogramPlot = ui->histogramPlot;
 
+    histogramPlot->clearGraphs();
+
     // Non Equalized
     QCPBars *nonEqHistBars = new QCPBars(histogramPlot->xAxis, histogramPlot->yAxis);
     histogramPlot->addPlottable(nonEqHistBars);
@@ -143,6 +145,8 @@ void Window::plotHistogram(QVector<double> key, QVector<double> nonEq, QVector<d
 
     histogramPlot->replot();
     histogramPlot->rescaleAxes();
+
+
 }
 
 void Window::keyPressEvent(QKeyEvent * e)
