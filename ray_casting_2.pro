@@ -37,7 +37,7 @@ DISTFILES += \
     shader/raycasting_direct_surface_render.frag \
     shader/raycasting_direct_surface_vector_color_render.frag
 
- INCLUDEPATH += "C:\Users\walter\Desktop\Qt\ray_casting_2\include"
+ INCLUDEPATH += "C:\Users\walter\Desktop\Qt\Volume_Rendering_Using_GLSL\include"
  INCLUDEPATH += "C:\Libraries\glew-1.13.0\include"
 # INCLUDEPATH += "C:\Program Files (x86)\GDCM 2.4\include\gdcm-2.4"
  LIBS        += -L"C:\Libraries\glew-1.13.0\lib" -lglew32
